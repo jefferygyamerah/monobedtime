@@ -16,7 +16,7 @@ export const sceneTypeSchema = z.enum([
 export const bedtimeRequestSchema = z
   .object({
     kidName: z.string().min(1).max(40),
-    age: z.number().int().min(2).max(12),
+    age: z.number().int().min(0).max(12),
     language: languageSchema,
     culturalBackground: z.string().min(1).max(80),
     location: z.string().min(1).max(80),
@@ -69,7 +69,19 @@ export const illustrationResponseSchema = z
   })
   .strict();
 
+export const imageUsageSchema = z
+  .object({
+    subscribed: z.boolean(),
+    subscriptionConfigured: z.boolean(),
+    canGenerate: z.boolean(),
+    dailyLimit: z.number().int().min(0),
+    usedFreeImages: z.number().int().min(0),
+    remainingFreeImages: z.number().int().min(0),
+  })
+  .strict();
+
 export type BedtimeRequest = z.infer<typeof bedtimeRequestSchema>;
 export type BedtimeResponse = z.infer<typeof bedtimeResponseSchema>;
 export type IllustrationRequest = z.infer<typeof illustrationRequestSchema>;
 export type IllustrationResponse = z.infer<typeof illustrationResponseSchema>;
+export type ImageUsage = z.infer<typeof imageUsageSchema>;

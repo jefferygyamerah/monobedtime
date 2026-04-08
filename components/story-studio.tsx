@@ -16,34 +16,34 @@ import type {
 } from "@/lib/story-contract";
 
 const initialForm: BedtimeRequest = {
-  kidName: "Sofia",
-  age: 6,
-  language: "es",
-  culturalBackground: "Panamena con raices afrolatinas",
-  location: "Ciudad de Panama",
-  theme: "una luna curiosa que guia hacia el sueno",
+  kidName: "Luna",
+  age: 0,
+  language: "en",
+  culturalBackground: "your family's bedtime traditions",
+  location: "home",
+  theme: "moonlight and cuddles",
   bedtimeMood: "calm",
   moralLesson: "",
-  favoriteAnimal: "monito titi",
-  favoriteColor: "naranja",
+  favoriteAnimal: "monkey",
+  favoriteColor: "apricot",
   premium: true,
 };
 
 const sampleStory: BedtimeResponse = {
-  title: "Sofia, Mono y la Linterna de Ciudad de Panama",
-  languageLabel: "Espanol",
-  readingTimeMinutes: 7,
+  title: "Luna, Mono, and the Quiet Moon",
+  languageLabel: "English",
+  readingTimeMinutes: 4,
   summary:
-    "Sofia sigue a Mono, un mono tranquilo con una linterna suave, por Ciudad de Panama y descubre que dormir tambien puede sentirse como volver a casa.",
+    "Luna follows Mono, a gentle monkey companion, through a quieter room and discovers that bedtime can feel soft, safe, and close.",
   moral:
-    "Dormir mejor empieza cuando el nino se siente seguro, querido y guiado con ternura.",
+    "Rest comes more easily when a child feels calm, held, and gently guided.",
   caregiverTip:
-    "Lee las partes de Mono con una voz mas calmada para que el cuento se sienta como compania, no como una instruccion.",
+    "Slow your voice a little on the last lines so the room feels quieter with each page.",
   coverScene: {
-    heading: "Esta noche con Mono",
-    text: "Sofia y Mono miran la noche desde la ventana mientras una luna curiosa abre el camino hacia el sueno.",
+    heading: "Tonight with Mono",
+    text: "Luna and Mono settle beside the blanket while the room grows softer and sleepier.",
     imagePrompt:
-      "Ilustracion infantil nocturna en Ciudad de Panama, nino llamado Sofia, Mono the monkey guide, luna suave, libro infantil premium",
+      "Gentle bedtime picture book cover, child named Luna, Mono the monkey guide, moonlight, warm apricot glow, safe for infants",
     sceneType: "moon",
   },
   storyBlocks: [
