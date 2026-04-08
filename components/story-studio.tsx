@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { MonkeyMark } from "@/components/monkey-mark";
 import { ScenePoster } from "@/components/scene-poster";
 import type {
   BedtimeRequest,
@@ -41,6 +42,12 @@ type IllustrationState = {
   loading: boolean;
   note: string | null;
 };
+
+const panelClass =
+  "rounded-[36px] border border-black/8 bg-white/68 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-2xl lg:p-8";
+
+const fieldClass =
+  "w-full rounded-2xl border border-black/8 bg-white/72 px-4 py-3 text-black outline-none transition placeholder:text-black/32 focus:border-[#FF7A00] focus:bg-white";
 
 export function StoryStudio() {
   const [form, setForm] = useState<BedtimeRequest>(initialForm);
@@ -96,7 +103,7 @@ export function StoryStudio() {
         cover: null,
         blocks: {},
         loading: true,
-        note: "Generando ilustraciones premium con Gemini...",
+        note: "Preparing premium art with Gemini in the background...",
       });
 
       const targets = [
@@ -135,9 +142,7 @@ export function StoryStudio() {
             const data = await response.json();
 
             if (!response.ok) {
-              throw new Error(
-                data.error || "No pudimos crear la ilustracion.",
-              );
+              throw new Error(data.error || "We could not create the illustration.");
             }
 
             return {
@@ -179,8 +184,8 @@ export function StoryStudio() {
         loading: false,
         note:
           successful > 0
-            ? "Las ilustraciones premium ya estan listas."
-            : "Seguimos mostrando las escenas base mientras Gemini termina o reintenta.",
+            ? "Premium illustrations are ready."
+            : "The built-in scene art is still carrying the experience beautifully while Gemini stays unavailable.",
       });
     }
 
@@ -214,7 +219,7 @@ export function StoryStudio() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "No pudimos preparar el cuento.");
+        throw new Error(data.error || "We could not prepare tonight's story.");
       }
 
       startTransition(() => {
@@ -222,7 +227,7 @@ export function StoryStudio() {
       });
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error ? caughtError.message : "Algo salio mal.",
+        caughtError instanceof Error ? caughtError.message : "Something went wrong.",
       );
     } finally {
       setLoading(false);
@@ -230,18 +235,21 @@ export function StoryStudio() {
   }
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 shadow-[0_24px_120px_rgba(0,0,0,0.42)] backdrop-blur lg:p-8">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#FF7A00]">
-              estudio nocturno
-            </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
-              Crea un cuento que si se sienta personal
-            </h2>
+    <div className="grid gap-10 lg:grid-cols-[1.02fr_0.98fr]">
+      <section className={panelClass}>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <MonkeyMark />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#FF7A00]">
+                bedtime studio
+              </p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-black">
+                Build a story that feels personal before the first line is read.
+              </h2>
+            </div>
           </div>
-          <div className="hidden rounded-full border border-[#FF7A00]/40 bg-[#FF7A00]/10 px-4 py-2 text-xs font-medium text-[#FFB170] md:block">
+          <div className="hidden rounded-full border border-black/8 bg-white/72 px-4 py-2 text-xs font-medium text-black/60 shadow-[0_10px_25px_rgba(15,23,42,0.05)] md:block">
             {previewBadge}
           </div>
         </div>
@@ -249,24 +257,22 @@ export function StoryStudio() {
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-sm text-white/72">Nombre del nino</span>
+              <span className="text-sm text-black/62">Kid name</span>
               <input
                 value={form.kidName}
                 onChange={(event) => updateField("kidName", event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-white outline-none transition focus:border-[#FF7A00]"
+                className={fieldClass}
                 placeholder="Luna"
                 required
               />
             </label>
 
             <label className="space-y-2">
-              <span className="text-sm text-white/72">Edad</span>
+              <span className="text-sm text-black/62">Age</span>
               <input
                 value={form.age}
-                onChange={(event) =>
-                  updateField("age", Number(event.target.value))
-                }
-                className="w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-white outline-none transition focus:border-[#FF7A00]"
+                onChange={(event) => updateField("age", Number(event.target.value))}
+                className={fieldClass}
                 min={2}
                 max={12}
                 type="number"
@@ -277,7 +283,7 @@ export function StoryStudio() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-sm text-white/72">Idioma</span>
+              <span className="text-sm text-black/62">Language</span>
               <select
                 value={form.language}
                 onChange={(event) =>
@@ -286,16 +292,16 @@ export function StoryStudio() {
                     event.target.value as BedtimeRequest["language"],
                   )
                 }
-                className="w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-white outline-none transition focus:border-[#FF7A00]"
+                className={fieldClass}
               >
-                <option value="es">Espanol</option>
+                <option value="es">Spanish</option>
                 <option value="en">English</option>
-                <option value="bilingual">Bilingue</option>
+                <option value="bilingual">Bilingual</option>
               </select>
             </label>
 
             <label className="space-y-2">
-              <span className="text-sm text-white/72">Estado de animo</span>
+              <span className="text-sm text-black/62">Mood</span>
               <select
                 value={form.bedtimeMood}
                 onChange={(event) =>
@@ -304,61 +310,56 @@ export function StoryStudio() {
                     event.target.value as BedtimeRequest["bedtimeMood"],
                   )
                 }
-                className="w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-white outline-none transition focus:border-[#FF7A00]"
+                className={fieldClass}
               >
-                <option value="calm">Muy calmado</option>
-                <option value="cozy">Calido y tierno</option>
-                <option value="adventurous">Con aventura suave</option>
+                <option value="calm">Very calm</option>
+                <option value="cozy">Warm and cozy</option>
+                <option value="adventurous">Soft adventure</option>
               </select>
             </label>
           </div>
 
           <label className="space-y-2">
-            <span className="text-sm text-white/72">Contexto cultural</span>
+            <span className="text-sm text-black/62">Cultural background</span>
             <input
               value={form.culturalBackground}
-              onChange={(event) =>
-                updateField("culturalBackground", event.target.value)
-              }
-              className="w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-white outline-none transition focus:border-[#FF7A00]"
-              placeholder="Dominicana, andina, afrolatina, mexicana..."
+              onChange={(event) => updateField("culturalBackground", event.target.value)}
+              className={fieldClass}
+              placeholder="Afrolatino, Dominicana, Andina, Mexicana..."
               required
             />
           </label>
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-sm text-white/72">Lugar</span>
+              <span className="text-sm text-black/62">Location</span>
               <input
                 value={form.location}
                 onChange={(event) => updateField("location", event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-white outline-none transition focus:border-[#FF7A00]"
-                placeholder="Quito, Ciudad de Panama, Miami..."
+                className={fieldClass}
+                placeholder="Panama City, Quito, Miami..."
                 required
               />
             </label>
 
             <label className="space-y-2">
-              <span className="text-sm text-white/72">Tema central</span>
+              <span className="text-sm text-black/62">Core theme</span>
               <input
                 value={form.theme}
                 onChange={(event) => updateField("theme", event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-white outline-none transition focus:border-[#FF7A00]"
-                placeholder="un bosque amable, una luna curiosa..."
+                className={fieldClass}
+                placeholder="A curious moon, a gentle forest..."
                 required
               />
             </label>
           </div>
 
-          <div className="rounded-[28px] border border-[#FF7A00]/20 bg-[#FF7A00]/8 p-4">
+          <div className="rounded-[28px] border border-black/8 bg-white/74 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.04)]">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-white">
-                  Variables premium
-                </p>
-                <p className="mt-1 text-sm text-white/65">
-                  Ya las dejo activas para este MVP. Luego las bloqueamos detras
-                  del plan pago.
+                <p className="text-sm font-medium text-black">Premium variables</p>
+                <p className="mt-1 text-sm text-black/56">
+                  These stay on for the demo so the story, monkey world, and future image layer feel richer.
                 </p>
               </div>
               <button
@@ -366,48 +367,42 @@ export function StoryStudio() {
                 onClick={() => updateField("premium", !form.premium)}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                   form.premium
-                    ? "bg-[#FF7A00] text-black"
-                    : "border border-white/15 text-white/72"
+                    ? "bg-black text-white"
+                    : "border border-black/10 bg-white/80 text-black/68"
                 }`}
               >
-                {form.premium ? "Premium activo" : "Modo simple"}
+                {form.premium ? "Premium on" : "Simple mode"}
               </button>
             </div>
 
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               <label className="space-y-2">
-                <span className="text-sm text-white/72">Animal favorito</span>
+                <span className="text-sm text-black/62">Favorite animal</span>
                 <input
                   value={form.favoriteAnimal ?? ""}
-                  onChange={(event) =>
-                    updateField("favoriteAnimal", event.target.value)
-                  }
-                  className="w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-white outline-none transition focus:border-[#FF7A00]"
-                  placeholder="conejo, mono, ballena..."
+                  onChange={(event) => updateField("favoriteAnimal", event.target.value)}
+                  className={fieldClass}
+                  placeholder="Monkey, rabbit, whale..."
                 />
               </label>
 
               <label className="space-y-2">
-                <span className="text-sm text-white/72">Color favorito</span>
+                <span className="text-sm text-black/62">Favorite color</span>
                 <input
                   value={form.favoriteColor ?? ""}
-                  onChange={(event) =>
-                    updateField("favoriteColor", event.target.value)
-                  }
-                  className="w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-white outline-none transition focus:border-[#FF7A00]"
-                  placeholder="naranja"
+                  onChange={(event) => updateField("favoriteColor", event.target.value)}
+                  className={fieldClass}
+                  placeholder="Orange"
                 />
               </label>
 
               <label className="space-y-2">
-                <span className="text-sm text-white/72">Leccion o valor</span>
+                <span className="text-sm text-black/62">Value or lesson</span>
                 <input
                   value={form.moralLesson ?? ""}
-                  onChange={(event) =>
-                    updateField("moralLesson", event.target.value)
-                  }
-                  className="w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-white outline-none transition focus:border-[#FF7A00]"
-                  placeholder="amabilidad, paciencia..."
+                  onChange={(event) => updateField("moralLesson", event.target.value)}
+                  className={fieldClass}
+                  placeholder="Kindness, patience..."
                 />
               </label>
             </div>
@@ -417,24 +412,23 @@ export function StoryStudio() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex min-h-14 items-center justify-center rounded-full bg-[#FF7A00] px-6 text-base font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-14 items-center justify-center rounded-full bg-black px-6 text-base font-semibold text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Hilando el cuento..." : "Crear cuento"}
+              {loading ? "Weaving the story..." : "Create story"}
             </button>
-            <p className="text-sm text-white/55">
-              Genera historia, moraleja, consejo para el adulto y escenas
-              ilustradas listas para demo.
+            <p className="text-sm text-black/52">
+              Story first, premium art second, graceful fallback always.
             </p>
           </div>
 
           {illustrations.note ? (
-            <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white/70">
+            <div className="rounded-2xl border border-black/8 bg-white/74 px-4 py-3 text-sm text-black/68 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
               {illustrations.note}
             </div>
           ) : null}
 
           {error ? (
-            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <div className="rounded-2xl border border-red-500/20 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           ) : null}
@@ -442,28 +436,32 @@ export function StoryStudio() {
       </section>
 
       <section className="space-y-5">
-        <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 shadow-[0_24px_120px_rgba(0,0,0,0.42)] backdrop-blur lg:p-8">
-          <div className="text-xs font-semibold uppercase tracking-[0.28em] text-[#FF7A00]">
-            preview vivo
+        <div className={panelClass}>
+          <div className="flex items-start gap-4">
+            <MonkeyMark className="p-2.5" />
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.28em] text-[#FF7A00]">
+                live preview
+              </div>
+              <h3 className="mt-3 text-3xl font-semibold text-black">
+                {deferredName || "Your little one"} gets a softer, brighter bedtime experience.
+              </h3>
+            </div>
           </div>
-          <h3 className="mt-3 text-3xl font-semibold text-white">
-            {deferredName || "Tu peque"} suena esta noche con algo mas suyo
-          </h3>
-          <p className="mt-3 max-w-xl text-base leading-7 text-white/70">
-            Monobedtime mezcla identidad, lenguaje y calma. El resultado esta
-            pensado para que un adulto lo lea en voz baja y el nino se sienta
-            visto.
+
+          <p className="mt-4 max-w-xl text-base leading-7 text-black/62">
+            The new look keeps the studio light and premium while the monkey still anchors the brand. It feels calmer for families and cleaner for demos.
           </p>
 
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             {[
-              "Culturalmente cercano",
-              "Bilingue",
-              "Listo para premium con Gemini",
+              "Bright glass-pane layout",
+              "Black-on-white readability",
+              "Monkey-led brand recall",
             ].map((item) => (
               <div
                 key={item}
-                className="rounded-2xl border border-white/10 bg-black/30 px-4 py-4 text-sm text-white/72"
+                className="rounded-2xl border border-black/8 bg-white/74 px-4 py-4 text-sm text-black/66 shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
               >
                 {item}
               </div>
@@ -480,12 +478,12 @@ export function StoryStudio() {
               imageDataUrl={illustrations.cover?.imageDataUrl}
             />
 
-            <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 shadow-[0_24px_120px_rgba(0,0,0,0.42)] backdrop-blur lg:p-8">
+            <div className={panelClass}>
               <div className="flex flex-wrap gap-2">
                 {story.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/60"
+                    className="rounded-full border border-black/8 bg-white/80 px-3 py-1 text-xs uppercase tracking-[0.18em] text-black/56"
                   >
                     {tag}
                   </span>
@@ -493,27 +491,27 @@ export function StoryStudio() {
               </div>
 
               <div className="mt-5 grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">
-                    Idioma
+                <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                  <div className="text-xs uppercase tracking-[0.18em] text-black/44">
+                    Language
                   </div>
-                  <div className="mt-2 text-lg font-medium text-white">
+                  <div className="mt-2 text-lg font-medium text-black">
                     {story.languageLabel}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">
-                    Tiempo
+                <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                  <div className="text-xs uppercase tracking-[0.18em] text-black/44">
+                    Reading time
                   </div>
-                  <div className="mt-2 text-lg font-medium text-white">
+                  <div className="mt-2 text-lg font-medium text-black">
                     {story.readingTimeMinutes} min
                   </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                  <div className="text-xs uppercase tracking-[0.18em] text-white/45">
-                    Moraleja
+                <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                  <div className="text-xs uppercase tracking-[0.18em] text-black/44">
+                    Moral
                   </div>
-                  <div className="mt-2 text-sm leading-6 text-white/72">
+                  <div className="mt-2 text-sm leading-6 text-black/62">
                     {story.moral}
                   </div>
                 </div>
@@ -523,7 +521,7 @@ export function StoryStudio() {
             {story.storyBlocks.map((block, index) => (
               <div
                 key={`${block.heading}-${index}`}
-                className="grid gap-4 rounded-[32px] border border-white/10 bg-white/[0.03] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur lg:grid-cols-[0.78fr_1fr]"
+                className="grid gap-4 rounded-[36px] border border-black/8 bg-white/68 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl lg:grid-cols-[0.78fr_1fr]"
               >
                 <ScenePoster
                   title={block.heading}
@@ -533,41 +531,39 @@ export function StoryStudio() {
                 />
                 <div className="flex flex-col justify-center">
                   <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#FF7A00]">
-                    escena {index + 1}
+                    scene {index + 1}
                   </div>
-                  <h4 className="mt-3 text-2xl font-semibold text-white">
+                  <h4 className="mt-3 text-2xl font-semibold text-black">
                     {block.heading}
                   </h4>
-                  <p className="mt-4 whitespace-pre-line text-base leading-8 text-white/76">
+                  <p className="mt-4 whitespace-pre-line text-base leading-8 text-black/66">
                     {block.text}
                   </p>
                 </div>
               </div>
             ))}
 
-            <div className="rounded-[32px] border border-white/10 bg-white/[0.03] p-6 shadow-[0_24px_120px_rgba(0,0,0,0.42)] backdrop-blur lg:p-8">
+            <div className={panelClass}>
               <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#FF7A00]">
-                guia para quien lee
+                caregiver note
               </div>
-              <p className="mt-3 text-2xl font-semibold text-white">
+              <p className="mt-3 text-2xl font-semibold text-black">
                 {story.caregiverTip}
               </p>
               {illustrations.loading ? (
-                <p className="mt-3 text-sm text-white/55">
-                  Gemini esta ilustrando la portada y las primeras escenas en
-                  segundo plano.
+                <p className="mt-3 text-sm text-black/50">
+                  Gemini is still working in the background on the cover and first scenes.
                 </p>
               ) : null}
             </div>
           </div>
         ) : (
-          <div className="rounded-[32px] border border-dashed border-white/15 bg-white/[0.02] p-8 text-white/58">
+          <div className="rounded-[36px] border border-dashed border-black/10 bg-white/48 p-8 text-black/54 shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur-xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#FF7A00]">
-              resultado
+              result
             </p>
             <p className="mt-4 text-lg leading-8">
-              Aqui aparecera el cuento listo para leer, con portada, escenas
-              ilustradas y un consejo final para cerrar la noche mejor.
+              The story will appear here with a cover, branded scene cards, and a cleaner bright presentation that feels ready for parents instead of a dark developer demo.
             </p>
           </div>
         )}
