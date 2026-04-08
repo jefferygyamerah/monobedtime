@@ -109,7 +109,7 @@ export function StoryStudio() {
     cover: null,
     blocks: {},
     loading: false,
-    note: "A demo Mono story is loaded below so the page never feels empty.",
+    note: "A Mono demo story is loaded below. Press Create AI story to watch the engine write one for your family.",
   });
   const deferredName = useDeferredValue(form.kidName);
 
@@ -144,7 +144,7 @@ export function StoryStudio() {
         loading: false,
         note: hasGeneratedStory
           ? null
-          : "A demo Mono story is loaded below so the page never feels empty.",
+          : "A Mono demo story is loaded below. Press Create AI story to watch the engine write one for your family.",
       });
       return;
     }
@@ -235,7 +235,7 @@ export function StoryStudio() {
         cover: coverIllustration,
         blocks: blockIllustrations,
         loading: false,
-        note:
+      note:
           successful > 0
             ? "Premium illustrations are ready."
             : "The built-in scene art is still carrying the experience beautifully while Gemini stays unavailable.",
@@ -298,7 +298,7 @@ export function StoryStudio() {
       cover: null,
       blocks: {},
       loading: false,
-      note: "A demo Mono story is loaded below so the page never feels empty.",
+      note: "A Mono demo story is loaded below. Press Create AI story to watch the engine write one for your family.",
     });
   }
 
@@ -482,10 +482,10 @@ export function StoryStudio() {
               disabled={loading}
               className="inline-flex min-h-14 items-center justify-center rounded-full bg-black px-6 text-base font-semibold text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Weaving the story..." : "Create story"}
+              {loading ? "AI is weaving the story..." : "Create AI story"}
             </button>
             <p className="text-sm text-black/52">
-              Mono leads the world. Story first, premium art second, graceful fallback always.
+              Mono leads the world. AI writes the story first, Gemini tries premium art second, graceful fallback always.
             </p>
           </div>
 
@@ -526,7 +526,7 @@ export function StoryStudio() {
           </div>
 
           <p className="mt-4 max-w-xl text-base leading-7 text-black/62">
-            The new look keeps the studio light and premium, while Mono turns the product from a generic story generator into a recognizable bedtime universe.
+            The preview starts with a Mono demo so the product never feels empty. Once you press Create AI story, Monobedtime writes a personalized bedtime story and then tries premium scene art.
           </p>
 
           <div className="mt-6 grid gap-3 md:grid-cols-3">
