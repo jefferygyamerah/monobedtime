@@ -29,6 +29,56 @@ const initialForm: BedtimeRequest = {
   premium: true,
 };
 
+const sampleStory: BedtimeResponse = {
+  title: "Sofia, Mono y la Linterna de Ciudad de Panama",
+  languageLabel: "Espanol",
+  readingTimeMinutes: 7,
+  summary:
+    "Sofia sigue a Mono, un mono tranquilo con una linterna suave, por Ciudad de Panama y descubre que dormir tambien puede sentirse como volver a casa.",
+  moral:
+    "Dormir mejor empieza cuando el nino se siente seguro, querido y guiado con ternura.",
+  caregiverTip:
+    "Lee las partes de Mono con una voz mas calmada para que el cuento se sienta como compania, no como una instruccion.",
+  coverScene: {
+    heading: "Esta noche con Mono",
+    text: "Sofia y Mono miran la noche desde la ventana mientras una luna curiosa abre el camino hacia el sueno.",
+    imagePrompt:
+      "Ilustracion infantil nocturna en Ciudad de Panama, nino llamado Sofia, Mono the monkey guide, luna suave, libro infantil premium",
+    sceneType: "moon",
+  },
+  storyBlocks: [
+    {
+      heading: "Mono aparece en la ventana",
+      text: "Sofia miro la ventana y vio como Ciudad de Panama se llenaba de sombras suaves. Entonces Mono aparecio con una linterna pequena y la noche dejo de sentirse tan grande.",
+      imagePrompt:
+        "Ilustracion infantil nocturna en Ciudad de Panama, nino llamado Sofia, Mono the monkey guide, luna suave, libro infantil premium",
+      sceneType: "moon",
+    },
+    {
+      heading: "Mono trae historias de casa",
+      text: "Mono se sento al lado de Sofia y conto historias de sus raices afrolatinas. Cada palabra sonaba conocida, como una cancion pequena que ya vivia dentro del corazon.",
+      imagePrompt:
+        "Mono the monkey guide contando historias familiares afrolatinas, calidez naranja, estetica de cuento para dormir",
+      sceneType: "village",
+    },
+    {
+      heading: "Un deseo tranquilo",
+      text: "Sofia penso en una luna curiosa que guia hacia el sueno y dejo que el descanso caminara despacito hasta la cama. Mono no apresuro nada; solo acompanaba con calma.",
+      imagePrompt:
+        "Escena de cuento antes de dormir con Mono the monkey guide, luna y estrellas, ilustracion premium",
+      sceneType: "forest",
+    },
+    {
+      heading: "Buenas noches con Mono",
+      text: "Cuando Mono bajo la luz de la linterna, Sofia ya tenia los ojos pesados. Quedo dormida con una sonrisa pequena y el pecho lleno de calma.",
+      imagePrompt:
+        "Nina durmiendo placidamente con Mono the monkey guide cerca, cuarto acogedor, estrellas suaves, ilustracion calida",
+      sceneType: "clouds",
+    },
+  ],
+  tags: ["mono", "demo", "cuentos", "dormir", "familia"],
+};
+
 function toApiPayload(form: BedtimeRequest) {
   return {
     ...form,
@@ -51,14 +101,15 @@ const fieldClass =
 
 export function StoryStudio() {
   const [form, setForm] = useState<BedtimeRequest>(initialForm);
-  const [story, setStory] = useState<BedtimeResponse | null>(null);
+  const [story, setStory] = useState<BedtimeResponse | null>(sampleStory);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hasGeneratedStory, setHasGeneratedStory] = useState(false);
   const [illustrations, setIllustrations] = useState<IllustrationState>({
     cover: null,
     blocks: {},
     loading: false,
-    note: null,
+    note: "A demo Mono story is loaded below so the page never feels empty.",
   });
   const deferredName = useDeferredValue(form.kidName);
 
@@ -86,12 +137,14 @@ export function StoryStudio() {
   useEffect(() => {
     let cancelled = false;
 
-    if (!story || !form.premium) {
+    if (!story || !form.premium || !hasGeneratedStory) {
       setIllustrations({
         cover: null,
         blocks: {},
         loading: false,
-        note: null,
+        note: hasGeneratedStory
+          ? null
+          : "A demo Mono story is loaded below so the page never feels empty.",
       });
       return;
     }
@@ -194,12 +247,13 @@ export function StoryStudio() {
     return () => {
       cancelled = true;
     };
-  }, [form.language, form.premium, story]);
+  }, [form.language, form.premium, hasGeneratedStory, story]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setHasGeneratedStory(true);
     setIllustrations({
       cover: null,
       blocks: {},
@@ -232,6 +286,20 @@ export function StoryStudio() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function loadDemoStory() {
+    setForm(initialForm);
+    setStory(sampleStory);
+    setError(null);
+    setLoading(false);
+    setHasGeneratedStory(false);
+    setIllustrations({
+      cover: null,
+      blocks: {},
+      loading: false,
+      note: "A demo Mono story is loaded below so the page never feels empty.",
+    });
   }
 
   return (
@@ -420,6 +488,14 @@ export function StoryStudio() {
               Mono leads the world. Story first, premium art second, graceful fallback always.
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={loadDemoStory}
+            className="inline-flex min-h-12 items-center justify-center rounded-full border border-black/10 bg-white/78 px-5 text-sm font-medium text-black/72 transition hover:bg-white"
+          >
+            Reload Mono demo
+          </button>
 
           {illustrations.note ? (
             <div className="rounded-2xl border border-black/8 bg-white/74 px-4 py-3 text-sm text-black/68 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
