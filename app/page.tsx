@@ -14,19 +14,19 @@ export default function Home() {
           </div>
 
           <h1 className="mt-6 text-5xl font-semibold leading-[0.94] tracking-tight text-black sm:text-6xl lg:text-7xl">
-            Black on white, glass-pane calm, and the monkey still leading bedtime.
+            Mono is the bedtime universe now, with glass-pane calm around every story.
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-8 text-black/64">
-            Monobedtime now feels lighter, calmer, and more premium. Parents can shape a bilingual bedtime story, keep the monkey guide in the experience, and preview the result inside a bright Apple-style glass studio.
+            Monobedtime now feels lighter, calmer, and more premium. Parents can shape a bilingual bedtime story while Mono, the gentle monkey guide, turns the product into a world kids can recognize night after night.
           </p>
         </div>
 
         <div className="grid gap-3 self-end md:grid-cols-3 lg:grid-cols-1">
           {[
+            "Mono stays central in every bedtime story",
             "Spanish, English, or bilingual stories",
-            "Premium variables ready to monetize",
-            "Monkey-led bedtime world with glass-card polish",
+            "Bright glass design with a memorable guide character",
           ].map((item) => (
             <div
               key={item}

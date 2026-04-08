@@ -27,104 +27,110 @@ function normalizeOptional(value?: string) {
 
 function languageLabel(language: BedtimeRequest["language"]) {
   if (language === "es") {
-    return "Español";
+    return "Espanol";
   }
 
   if (language === "en") {
     return "English";
   }
 
-  return "Español + English";
+  return "Espanol + English";
 }
 
 function fallbackCopy(input: BedtimeRequest) {
   if (input.language === "en") {
     return {
-      title: `${input.kidName} and the Little Lantern of ${input.location}`,
-      summary: `${input.kidName} follows a gentle glowing lantern through ${input.location} and discovers that bedtime can feel safe, soft, and full of wonder.`,
-      moral: "Rest grows easier when a child feels seen, safe, and connected to home.",
-      caregiverTip: "Read slowly, pause after each paragraph, and let your child repeat the softest line before sleep.",
+      title: `${input.kidName}, Mono, and the Little Lantern of ${input.location}`,
+      summary: `${input.kidName} follows Mono, a gentle monkey guide, through ${input.location} and discovers that bedtime can feel safe, soft, and full of wonder.`,
+      moral:
+        "Rest grows easier when a child feels seen, safe, and gently guided toward home.",
+      caregiverTip:
+        "Read Mono's lines with a softer voice so your child feels accompanied instead of rushed into sleep.",
       blocks: [
         {
-          heading: "A quiet beginning",
-          text: `${input.kidName} looked out over ${input.location} while the evening settled in. The air felt ${input.bedtimeMood === "adventurous" ? "exciting but calm enough for a last little adventure" : "soft and slow, like a blanket made of stars"}.`,
-          imagePrompt: `A cozy bedtime illustration in ${input.location} with a child named ${input.kidName}, glowing lantern light, premium picture-book composition`,
+          heading: "Mono arrives first",
+          text: `${input.kidName} looked out over ${input.location} while the evening settled in. Then Mono, a calm little monkey with a lantern glow, appeared beside the window and made the whole room feel friendlier.`,
+          imagePrompt: `A cozy bedtime illustration in ${input.location} with a child named ${input.kidName} and a gentle monkey guide named Mono, glowing lantern light, premium picture-book composition`,
         },
         {
-          heading: "The lantern listens",
-          text: `A tiny lantern floated beside ${input.kidName} and whispered stories from ${input.culturalBackground}. It reminded ${input.kidName} that brave hearts can still love quiet moments.`,
-          imagePrompt: `Bedtime story scene with a floating lantern, child from ${input.culturalBackground}, warm moonlight, gentle wonder`,
+          heading: "Stories that feel like home",
+          text: `Mono padded softly beside ${input.kidName} and shared bedtime stories from ${input.culturalBackground}. Every word felt familiar, as if home had quietly sat down beside the bed.`,
+          imagePrompt: `Bedtime story scene with Mono the monkey guide, child from ${input.culturalBackground}, warm moonlight, gentle wonder`,
         },
         {
-          heading: "Home in the heart",
-          text: `Before the moon climbed too high, ${input.kidName} thought about ${input.theme}. The lantern glowed brighter, as if to say that home can travel inside a child wherever love goes.`,
-          imagePrompt: `Moonlit bedtime scene about ${input.theme}, child feeling safe, orange glow, cinematic children's book style`,
+          heading: "A dream with a hand to hold",
+          text: `Before the moon climbed too high, ${input.kidName} thought about ${input.theme}. Mono lifted the lantern a little higher, as if to say that brave hearts can still choose calm.`,
+          imagePrompt: `Moonlit bedtime scene about ${input.theme}, child and monkey guide Mono feeling safe, orange glow, cinematic children's book style`,
         },
         {
           heading: "The softest goodnight",
-          text: `${input.kidName} tucked the lantern into a pocket of dreams and crawled into bed. Soon the room was full of peaceful breaths, gentle hope, and the promise of tomorrow.`,
-          imagePrompt: `Peaceful child falling asleep, cozy room, glowing stars, bedtime picture-book art`,
+          text: `Mono tucked the lantern near the pillow, smiled, and reminded ${input.kidName} that sleep can feel like being carried by kindness. Soon the room was full of peaceful breaths and tomorrow's promise.`,
+          imagePrompt: `Peaceful child falling asleep with a gentle monkey guide nearby, cozy room, glowing stars, bedtime picture-book art`,
         },
       ],
-      tags: ["bedtime", "comfort", "family", input.location.toLowerCase()],
+      tags: ["mono", "bedtime", "comfort", "family", input.location.toLowerCase()],
     };
   }
 
   if (input.language === "bilingual") {
     return {
-      title: `${input.kidName} y la Linterna de ${input.location} / ${input.kidName} and the Lantern of ${input.location}`,
-      summary: `${input.kidName} sigue una linterna tranquila por ${input.location} y descubre una forma suave de quedarse dormido.\nEN: ${input.kidName} follows a gentle lantern through ${input.location} and discovers a softer way to fall asleep.`,
-      moral: "Dormir mejor empieza cuando el niño se siente seguro, querido y cerca de su historia.\nEN: Better sleep starts when a child feels safe, loved, and close to their story.",
-      caregiverTip: "Lee primero la parte en español y luego la parte en inglés con una voz más lenta.\nEN: Read the Spanish line first, then the English line in an even slower voice.",
+      title: `${input.kidName}, Mono y la Linterna de ${input.location} / ${input.kidName}, Mono, and the Lantern of ${input.location}`,
+      summary: `${input.kidName} sigue a Mono, un mono suave y curioso, por ${input.location} y descubre una forma mas tranquila de quedarse dormido.\nEN: ${input.kidName} follows Mono, a gentle curious monkey, through ${input.location} and discovers a calmer way to fall asleep.`,
+      moral:
+        "Dormir mejor empieza cuando el nino se siente seguro, querido y acompanado.\nEN: Better sleep starts when a child feels safe, loved, and gently accompanied.",
+      caregiverTip:
+        "Lee las frases de Mono con una voz serena y un poco mas baja.\nEN: Read Mono's lines in a softer, slower voice.",
       blocks: [
         {
-          heading: "La noche comienza / Night begins",
-          text: `${input.kidName} miró el cielo sobre ${input.location} y sintió que la noche se acomodaba despacito.\nEN: ${input.kidName} looked up at the sky over ${input.location} and felt the night settling in very gently.`,
-          imagePrompt: `Bilingual bedtime illustration in ${input.location}, child named ${input.kidName}, soft glowing moon, premium picture book`,
+          heading: "Mono llega primero / Mono arrives first",
+          text: `${input.kidName} miro el cielo sobre ${input.location} y sintio que la noche se acomodaba despacito. Entonces Mono aparecio con una linterna tibia.\nEN: ${input.kidName} looked up at the sky over ${input.location} and felt the night settling in very gently. Then Mono appeared with a warm lantern.`,
+          imagePrompt: `Bilingual bedtime illustration in ${input.location}, child named ${input.kidName}, gentle monkey guide Mono, soft moonlight, premium picture book`,
         },
         {
-          heading: "La linterna escucha / The lantern listens",
-          text: `Una pequeña linterna dorada contó historias de ${input.culturalBackground} y dejó una calma bonita en el pecho de ${input.kidName}.\nEN: A little golden lantern shared stories from ${input.culturalBackground} and left a peaceful calm in ${input.kidName}'s chest.`,
-          imagePrompt: `Child listening to cultural bedtime stories, glowing lantern, warm orange accents, children's book style`,
+          heading: "Historias cercanas / Stories close to home",
+          text: `Mono conto historias de ${input.culturalBackground} y dejo una calma bonita en el pecho de ${input.kidName}.\nEN: Mono shared stories from ${input.culturalBackground} and left a peaceful calm in ${input.kidName}'s chest.`,
+          imagePrompt: `Child listening to cultural bedtime stories with Mono the monkey guide, warm orange accents, children's book style`,
         },
         {
-          heading: "Un sueño con propósito / A dream with purpose",
-          text: `${input.kidName} pensó en ${input.theme} y la noche pareció sonreír.\nEN: ${input.kidName} thought about ${input.theme}, and the night seemed to smile back.`,
-          imagePrompt: `Dreamy bedtime art about ${input.theme}, moonlight, calm child, soft premium illustration`,
+          heading: "Un sueno con Mono / A dream with Mono",
+          text: `${input.kidName} penso en ${input.theme} y la noche parecio sonreir.\nEN: ${input.kidName} thought about ${input.theme}, and the night seemed to smile back while Mono stayed close.`,
+          imagePrompt: `Dreamy bedtime art about ${input.theme}, moonlight, calm child and monkey guide Mono, soft premium illustration`,
         },
       ],
-      tags: ["bilingual", "bedtime", "calm", input.location.toLowerCase()],
+      tags: ["mono", "bilingual", "bedtime", "calm", input.location.toLowerCase()],
     };
   }
 
   return {
-    title: `${input.kidName} y la Linterna de ${input.location}`,
-    summary: `${input.kidName} sigue una linterna tranquila por ${input.location} y descubre que dormir también puede sentirse como volver a casa.`,
-    moral: "Dormir mejor empieza cuando el niño se siente seguro, querido y orgulloso de su historia.",
-    caregiverTip: "Lee con un ritmo lento y repite la última frase dos veces para que el cierre se sienta más relajante.",
+    title: `${input.kidName}, Mono y la Linterna de ${input.location}`,
+    summary: `${input.kidName} sigue a Mono, un mono tranquilo con una linterna suave, por ${input.location} y descubre que dormir tambien puede sentirse como volver a casa.`,
+    moral:
+      "Dormir mejor empieza cuando el nino se siente seguro, querido y guiado con ternura.",
+    caregiverTip:
+      "Lee las partes de Mono con una voz mas calmada para que el cuento se sienta como compania, no como una instruccion.",
     blocks: [
       {
-        heading: "La noche se acomoda",
-        text: `${input.kidName} miró la ventana y vio cómo ${input.location} se llenaba de sombras suaves. La noche no daba miedo; parecía una manta oscura con puntitos de luz.`,
-        imagePrompt: `Ilustración infantil nocturna en ${input.location}, niño llamado ${input.kidName}, luna suave, libro infantil premium`,
+        heading: "Mono aparece en la ventana",
+        text: `${input.kidName} miro la ventana y vio como ${input.location} se llenaba de sombras suaves. Entonces Mono aparecio con una linterna pequena y la noche dejo de sentirse tan grande.`,
+        imagePrompt: `Ilustracion infantil nocturna en ${input.location}, nino llamado ${input.kidName}, Mono the monkey guide, luna suave, libro infantil premium`,
       },
       {
-        heading: "La linterna de la familia",
-        text: `Una linterna pequeña salió a saludar y contó historias de ${input.culturalBackground}. Cada palabra sonaba conocida, como una canción que vive dentro del corazón.`,
-        imagePrompt: `Linterna mágica contando historias familiares de ${input.culturalBackground}, calidez naranja, estética de cuento para dormir`,
+        heading: "Mono trae historias de casa",
+        text: `Mono se sento al lado de ${input.kidName} y conto historias de ${input.culturalBackground}. Cada palabra sonaba conocida, como una cancion pequena que ya vivia dentro del corazon.`,
+        imagePrompt: `Mono the monkey guide contando historias familiares de ${input.culturalBackground}, calidez naranja, estetica de cuento para dormir`,
       },
       {
         heading: "Un deseo tranquilo",
-        text: `${input.kidName} pensó en ${input.theme} y dejó que el sueño caminara despacito hasta la cama. Nadie tenía prisa; la noche sabía exactamente cómo abrazarlo.`,
-        imagePrompt: `Escena de cuento antes de dormir sobre ${input.theme}, niño sintiéndose seguro, luna y estrellas, ilustración premium`,
+        text: `${input.kidName} penso en ${input.theme} y dejo que el sueno caminara despacito hasta la cama. Mono no apresuro nada; solo acompanaba con calma.`,
+        imagePrompt: `Escena de cuento antes de dormir sobre ${input.theme}, nino sintiendose seguro, Mono the monkey guide, luna y estrellas, ilustracion premium`,
       },
       {
-        heading: "Buenas noches, corazón",
-        text: `Cuando la linterna se apagó, ${input.kidName} ya tenía los ojos pesados. Quedó dormido con una sonrisa pequeña y un pecho lleno de calma.`,
-        imagePrompt: `Niño durmiendo plácidamente, cuarto acogedor, estrellas suaves, ilustración cálida`,
+        heading: "Buenas noches con Mono",
+        text: `Cuando Mono bajo la luz de la linterna, ${input.kidName} ya tenia los ojos pesados. Quedo dormido con una sonrisa pequena y el pecho lleno de calma.`,
+        imagePrompt: `Nino durmiendo placidamente con Mono the monkey guide cerca, cuarto acogedor, estrellas suaves, ilustracion calida`,
       },
     ],
-    tags: ["cuentos", "dormir", "familia", input.location.toLowerCase()],
+    tags: ["mono", "cuentos", "dormir", "familia", input.location.toLowerCase()],
   };
 }
 
@@ -150,9 +156,11 @@ function buildFallbackStory(input: BedtimeRequest): BedtimeResponse {
     moral: fallback.moral,
     caregiverTip: fallback.caregiverTip,
     coverScene: {
-      heading: input.language === "en" ? "Tonight's cover" : "Portada de esta noche",
+      heading: input.language === "en" ? "Tonight with Mono" : "Esta noche con Mono",
       text: fallback.summary,
-      imagePrompt: fallback.blocks[0]?.imagePrompt ?? "Soft bedtime picture-book cover",
+      imagePrompt:
+        fallback.blocks[0]?.imagePrompt ??
+        "Soft bedtime picture-book cover with Mono the monkey guide",
       sceneType: "moon",
     },
     storyBlocks: fallback.blocks.map((block, index) => ({
@@ -169,6 +177,8 @@ function buildSystemPrompt(input: BedtimeRequest) {
   return [
     "You create premium bedtime stories for families.",
     "Return only data that matches the schema exactly.",
+    "Mono is the central recurring monkey guide in the Monobedtime universe.",
+    "Unless the user clearly asks otherwise, Mono must appear as a gentle, emotionally safe companion in the cover scene and at least two story blocks.",
     "The tone must be sleepy, gentle, emotionally safe, and age-appropriate.",
     `The child's name is ${input.kidName} and the child is ${input.age} years old.`,
     `The requested language mode is ${input.language}.`,
@@ -179,6 +189,7 @@ function buildSystemPrompt(input: BedtimeRequest) {
         : "Every string must be bilingual: Spanish first, then English on a new line prefixed with 'EN:'.",
     "Avoid scary conflict, loud endings, or fast pacing.",
     "Each story block should feel visual enough for a future picture-book illustration.",
+    "Mono should never feel chaotic or mischievous. Mono is calm, warm, loyal, and softly magical.",
     "Pick sceneType values only from this set: moon, clouds, village, forest, jungle, ocean, mountains, city.",
   ].join("\n");
 }
@@ -194,9 +205,10 @@ function buildPrompt(input: BedtimeRequest) {
     `Favorite animal: ${normalizeOptional(input.favoriteAnimal)}`,
     `Favorite color: ${normalizeOptional(input.favoriteColor)}`,
     `Moral or lesson: ${normalizeOptional(input.moralLesson)}`,
+    "Mono is the signature monkey guide for Monobedtime and should feel central, recognizable, and kind.",
     input.premium
-      ? "Premium mode is on. Use the optional details naturally and make the story feel more tailored and collectible."
-      : "Keep the story simple, soothing, and elegant.",
+      ? "Premium mode is on. Use the optional details naturally and make the story feel more tailored, collectible, and visually rich."
+      : "Keep the story simple, soothing, elegant, and still include Mono naturally.",
     "Return a title, summary, cover scene, 3 or 4 story blocks, a moral, a caregiver tip, and tags.",
   ].join("\n");
 }

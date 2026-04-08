@@ -359,7 +359,7 @@ export function StoryStudio() {
               <div>
                 <p className="text-sm font-medium text-black">Premium variables</p>
                 <p className="mt-1 text-sm text-black/56">
-                  These stay on for the demo so the story, monkey world, and future image layer feel richer.
+                  These stay on for the demo so Mono can feel central, the story can feel richer, and the art layer has more to work with.
                 </p>
               </div>
               <button
@@ -417,7 +417,7 @@ export function StoryStudio() {
               {loading ? "Weaving the story..." : "Create story"}
             </button>
             <p className="text-sm text-black/52">
-              Story first, premium art second, graceful fallback always.
+              Mono leads the world. Story first, premium art second, graceful fallback always.
             </p>
           </div>
 
@@ -444,20 +444,20 @@ export function StoryStudio() {
                 live preview
               </div>
               <h3 className="mt-3 text-3xl font-semibold text-black">
-                {deferredName || "Your little one"} gets a softer, brighter bedtime experience.
+                {deferredName || "Your little one"} gets a softer bedtime with Mono close by.
               </h3>
             </div>
           </div>
 
           <p className="mt-4 max-w-xl text-base leading-7 text-black/62">
-            The new look keeps the studio light and premium while the monkey still anchors the brand. It feels calmer for families and cleaner for demos.
+            The new look keeps the studio light and premium, while Mono turns the product from a generic story generator into a recognizable bedtime universe.
           </p>
 
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             {[
-              "Bright glass-pane layout",
-              "Black-on-white readability",
-              "Monkey-led brand recall",
+              "Mono is the recurring guide",
+              "Every story world feels branded",
+              "Parents remember the monkey, not just the output",
             ].map((item) => (
               <div
                 key={item}
@@ -479,40 +479,59 @@ export function StoryStudio() {
             />
 
             <div className={panelClass}>
-              <div className="flex flex-wrap gap-2">
-                {story.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-black/8 bg-white/80 px-3 py-1 text-xs uppercase tracking-[0.18em] text-black/56"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                <div>
+                  <div className="flex flex-wrap gap-2">
+                    {story.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-black/8 bg-white/80 px-3 py-1 text-xs uppercase tracking-[0.18em] text-black/56"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
 
-              <div className="mt-5 grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-                  <div className="text-xs uppercase tracking-[0.18em] text-black/44">
-                    Language
-                  </div>
-                  <div className="mt-2 text-lg font-medium text-black">
-                    {story.languageLabel}
+                  <div className="mt-5 grid gap-3 md:grid-cols-3">
+                    <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                      <div className="text-xs uppercase tracking-[0.18em] text-black/44">
+                        Language
+                      </div>
+                      <div className="mt-2 text-lg font-medium text-black">
+                        {story.languageLabel}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                      <div className="text-xs uppercase tracking-[0.18em] text-black/44">
+                        Reading time
+                      </div>
+                      <div className="mt-2 text-lg font-medium text-black">
+                        {story.readingTimeMinutes} min
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                      <div className="text-xs uppercase tracking-[0.18em] text-black/44">
+                        Moral
+                      </div>
+                      <div className="mt-2 text-sm leading-6 text-black/62">
+                        {story.moral}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-                  <div className="text-xs uppercase tracking-[0.18em] text-black/44">
-                    Reading time
-                  </div>
-                  <div className="mt-2 text-lg font-medium text-black">
-                    {story.readingTimeMinutes} min
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-                  <div className="text-xs uppercase tracking-[0.18em] text-black/44">
-                    Moral
-                  </div>
-                  <div className="mt-2 text-sm leading-6 text-black/62">
-                    {story.moral}
+
+                <div className="rounded-[28px] border border-black/8 bg-white/80 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                  <div className="flex items-start gap-4">
+                    <MonkeyMark className="p-2.5" />
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#FF7A00]">
+                        tonight&apos;s guide
+                      </div>
+                      <h4 className="mt-2 text-xl font-semibold text-black">Mono</h4>
+                      <p className="mt-2 text-sm leading-6 text-black/62">
+                        Mono is the calm monkey companion who makes every Monobedtime story feel like part of the same world.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -563,7 +582,7 @@ export function StoryStudio() {
               result
             </p>
             <p className="mt-4 text-lg leading-8">
-              The story will appear here with a cover, branded scene cards, and a cleaner bright presentation that feels ready for parents instead of a dark developer demo.
+              The story will appear here with Mono at the center, a cover, branded scene cards, and a bright presentation that feels ready for parents instead of a generic demo.
             </p>
           </div>
         )}
