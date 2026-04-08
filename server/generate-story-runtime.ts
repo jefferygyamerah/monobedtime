@@ -151,7 +151,7 @@ function buildFallbackStory(input: BedtimeRequest): BedtimeResponse {
   return bedtimeResponseSchema.parse({
     title: fallback.title,
     languageLabel: languageLabel(input.language),
-    readingTimeMinutes: input.premium ? 7 : 4,
+    readingTimeMinutes: 10,
     summary: fallback.summary,
     moral: fallback.moral,
     caregiverTip: fallback.caregiverTip,
@@ -181,6 +181,9 @@ function buildSystemPrompt(input: BedtimeRequest) {
     "Unless the user clearly asks otherwise, Mono must appear as a gentle, emotionally safe companion in the cover scene and at least two story blocks.",
     "The tone must be sleepy, gentle, emotionally safe, and age-appropriate.",
     `The child's name is ${input.kidName} and the child is ${input.age} years old.`,
+    input.age <= 1
+      ? "This story is being read aloud to an infant by a caregiver. Use very gentle imagery, simple soothing language, and no school-age assumptions."
+      : "This story may be read to or with a young child. Keep it gentle and calming.",
     `The requested language mode is ${input.language}.`,
     input.language === "es"
       ? "Every string must be in natural Spanish."
@@ -188,6 +191,8 @@ function buildSystemPrompt(input: BedtimeRequest) {
         ? "Every string must be in natural English."
         : "Every string must be bilingual: Spanish first, then English on a new line prefixed with 'EN:'.",
     "Avoid scary conflict, loud endings, or fast pacing.",
+    "readingTimeMinutes must be exactly 10.",
+    "Hard limits: summary must stay under 220 characters, moral under 180 characters, caregiverTip under 200 characters, headings under 80 characters, and imagePrompt under 240 characters.",
     "Each story block should feel visual enough for a future picture-book illustration.",
     "Mono should never feel chaotic or mischievous. Mono is calm, warm, loyal, and softly magical.",
     "Pick sceneType values only from this set: moon, clouds, village, forest, jungle, ocean, mountains, city.",
@@ -210,6 +215,7 @@ function buildPrompt(input: BedtimeRequest) {
       ? "Premium mode is on. Use the optional details naturally and make the story feel more tailored, collectible, and visually rich."
       : "Keep the story simple, soothing, elegant, and still include Mono naturally.",
     "Return a title, summary, cover scene, 3 or 4 story blocks, a moral, a caregiver tip, and tags.",
+    "Set readingTimeMinutes to exactly 10.",
   ].join("\n");
 }
 

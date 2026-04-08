@@ -16,7 +16,7 @@ import type {
 } from "@/lib/story-contract";
 
 const initialForm: BedtimeRequest = {
-  kidName: "Luna",
+  kidName: "",
   age: 0,
   language: "en",
   culturalBackground: "your family's bedtime traditions",
@@ -27,56 +27,6 @@ const initialForm: BedtimeRequest = {
   favoriteAnimal: "monkey",
   favoriteColor: "apricot",
   premium: true,
-};
-
-const sampleStory: BedtimeResponse = {
-  title: "Luna, Mono, and the Quiet Moon",
-  languageLabel: "English",
-  readingTimeMinutes: 4,
-  summary:
-    "Luna follows Mono, a gentle monkey companion, through a quieter room and discovers that bedtime can feel soft, safe, and close.",
-  moral:
-    "Rest comes more easily when a child feels calm, held, and gently guided.",
-  caregiverTip:
-    "Slow your voice a little on the last lines so the room feels quieter with each page.",
-  coverScene: {
-    heading: "Tonight with Mono",
-    text: "Luna and Mono settle beside the blanket while the room grows softer and sleepier.",
-    imagePrompt:
-      "Gentle bedtime picture book cover, child named Luna, Mono the monkey guide, moonlight, warm apricot glow, safe for infants",
-    sceneType: "moon",
-  },
-  storyBlocks: [
-    {
-      heading: "Mono aparece en la ventana",
-      text: "Sofia miro la ventana y vio como Ciudad de Panama se llenaba de sombras suaves. Entonces Mono aparecio con una linterna pequena y la noche dejo de sentirse tan grande.",
-      imagePrompt:
-        "Ilustracion infantil nocturna en Ciudad de Panama, nino llamado Sofia, Mono the monkey guide, luna suave, libro infantil premium",
-      sceneType: "moon",
-    },
-    {
-      heading: "Mono trae historias de casa",
-      text: "Mono se sento al lado de Sofia y conto historias de sus raices afrolatinas. Cada palabra sonaba conocida, como una cancion pequena que ya vivia dentro del corazon.",
-      imagePrompt:
-        "Mono the monkey guide contando historias familiares afrolatinas, calidez naranja, estetica de cuento para dormir",
-      sceneType: "village",
-    },
-    {
-      heading: "Un deseo tranquilo",
-      text: "Sofia penso en una luna curiosa que guia hacia el sueno y dejo que el descanso caminara despacito hasta la cama. Mono no apresuro nada; solo acompanaba con calma.",
-      imagePrompt:
-        "Escena de cuento antes de dormir con Mono the monkey guide, luna y estrellas, ilustracion premium",
-      sceneType: "forest",
-    },
-    {
-      heading: "Buenas noches con Mono",
-      text: "Cuando Mono bajo la luz de la linterna, Sofia ya tenia los ojos pesados. Quedo dormida con una sonrisa pequena y el pecho lleno de calma.",
-      imagePrompt:
-        "Nina durmiendo placidamente con Mono the monkey guide cerca, cuarto acogedor, estrellas suaves, ilustracion calida",
-      sceneType: "clouds",
-    },
-  ],
-  tags: ["mono", "demo", "cuentos", "dormir", "familia"],
 };
 
 function toApiPayload(form: BedtimeRequest) {
@@ -101,7 +51,7 @@ const fieldClass =
 
 export function StoryStudio() {
   const [form, setForm] = useState<BedtimeRequest>(initialForm);
-  const [story, setStory] = useState<BedtimeResponse | null>(sampleStory);
+  const [story, setStory] = useState<BedtimeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasGeneratedStory, setHasGeneratedStory] = useState(false);
@@ -109,7 +59,7 @@ export function StoryStudio() {
     cover: null,
     blocks: {},
     loading: false,
-    note: "A Mono demo story is loaded below. Press Create AI story to watch the engine write one for your family.",
+    note: "Add the story details first. The story and scene art appear only after generation.",
   });
   const deferredName = useDeferredValue(form.kidName);
 
@@ -144,7 +94,7 @@ export function StoryStudio() {
         loading: false,
         note: hasGeneratedStory
           ? null
-          : "A Mono demo story is loaded below. Press Create AI story to watch the engine write one for your family.",
+          : "Add the story details first. The story and scene art appear only after generation.",
       });
       return;
     }
@@ -280,6 +230,8 @@ export function StoryStudio() {
         setStory(data as BedtimeResponse);
       });
     } catch (caughtError) {
+      setStory(null);
+      setHasGeneratedStory(false);
       setError(
         caughtError instanceof Error ? caughtError.message : "Something went wrong.",
       );
@@ -288,9 +240,9 @@ export function StoryStudio() {
     }
   }
 
-  function loadDemoStory() {
+  function resetCanvas() {
     setForm(initialForm);
-    setStory(sampleStory);
+    setStory(null);
     setError(null);
     setLoading(false);
     setHasGeneratedStory(false);
@@ -298,7 +250,7 @@ export function StoryStudio() {
       cover: null,
       blocks: {},
       loading: false,
-      note: "A Mono demo story is loaded below. Press Create AI story to watch the engine write one for your family.",
+      note: "Add the story details first. The story and scene art appear only after generation.",
     });
   }
 
@@ -325,7 +277,7 @@ export function StoryStudio() {
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-sm text-black/62">Kid name</span>
+              <span className="text-sm text-black/62">Child name</span>
               <input
                 value={form.kidName}
                 onChange={(event) => updateField("kidName", event.target.value)}
@@ -341,7 +293,7 @@ export function StoryStudio() {
                 value={form.age}
                 onChange={(event) => updateField("age", Number(event.target.value))}
                 className={fieldClass}
-                min={2}
+                min={0}
                 max={12}
                 type="number"
                 required
@@ -425,9 +377,9 @@ export function StoryStudio() {
           <div className="rounded-[28px] border border-black/8 bg-white/74 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.04)]">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-black">Premium variables</p>
+                <p className="text-sm font-medium text-black">More bedtime details</p>
                 <p className="mt-1 text-sm text-black/56">
-                  These stay on for the demo so Mono can feel central, the story can feel richer, and the art layer has more to work with.
+                  These help the story feel more personal without making the setup heavy on mobile.
                 </p>
               </div>
               <button
@@ -482,19 +434,19 @@ export function StoryStudio() {
               disabled={loading}
               className="inline-flex min-h-14 items-center justify-center rounded-full bg-black px-6 text-base font-semibold text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "AI is weaving the story..." : "Create AI story"}
+              {loading ? "Writing your 10-minute story..." : "Create 10-minute story"}
             </button>
             <p className="text-sm text-black/52">
-              Mono leads the world. AI writes the story first, Gemini tries premium art second, graceful fallback always.
+              Mono stays at the center. The story writes first, the art tries to follow, and the built-in scenes stay ready if live services fail.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={loadDemoStory}
+            onClick={resetCanvas}
             className="inline-flex min-h-12 items-center justify-center rounded-full border border-black/10 bg-white/78 px-5 text-sm font-medium text-black/72 transition hover:bg-white"
           >
-            Reload Mono demo
+            Clear canvas
           </button>
 
           {illustrations.note ? (
@@ -517,7 +469,7 @@ export function StoryStudio() {
             <MonkeyMark className="p-2.5" />
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.28em] text-[#FF7A00]">
-                live preview
+                story canvas
               </div>
               <h3 className="mt-3 text-3xl font-semibold text-black">
                 {deferredName || "Your little one"} gets a softer bedtime with Mono close by.
@@ -526,14 +478,14 @@ export function StoryStudio() {
           </div>
 
           <p className="mt-4 max-w-xl text-base leading-7 text-black/62">
-            The preview starts with a Mono demo so the product never feels empty. Once you press Create AI story, Monobedtime writes a personalized bedtime story and then tries premium scene art.
+            This area stays blank until you generate a story. Once you press Create 10-minute story, Monobedtime writes a personalized story first and then tries premium scene art.
           </p>
 
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             {[
               "Mono is the recurring guide",
               "Every story world feels branded",
-              "Parents remember the monkey, not just the output",
+              "Mono stays recognizable from story to story",
             ].map((item) => (
               <div
                 key={item}
@@ -545,7 +497,7 @@ export function StoryStudio() {
           </div>
         </div>
 
-        {story ? (
+        {story && hasGeneratedStory ? (
           <div className="space-y-5">
             <ScenePoster
               title={story.title}
@@ -658,7 +610,7 @@ export function StoryStudio() {
               result
             </p>
             <p className="mt-4 text-lg leading-8">
-              The story will appear here with Mono at the center, a cover, branded scene cards, and a bright presentation that feels ready for parents instead of a generic demo.
+              The story appears here with Mono at the center, clear scene cards, and a gentle fallback so the experience still works when live generation stumbles.
             </p>
           </div>
         )}
