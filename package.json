@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/deepseek": "^2.0.29",
+    "@ai-sdk/google": "^3.0.60",
     "ai": "^6.0.152",
     "next": "14.2.35",
     "react": "^18",

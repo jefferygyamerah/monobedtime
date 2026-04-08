@@ -52,5 +52,24 @@ export const bedtimeResponseSchema = z
   })
   .strict();
 
+export const illustrationRequestSchema = z
+  .object({
+    title: z.string().min(1).max(100),
+    prompt: z.string().min(1).max(500),
+    sceneType: sceneTypeSchema,
+    language: languageSchema,
+  })
+  .strict();
+
+export const illustrationResponseSchema = z
+  .object({
+    imageDataUrl: z.string().nullable(),
+    fallback: z.boolean(),
+    note: z.string().min(1).max(160),
+  })
+  .strict();
+
 export type BedtimeRequest = z.infer<typeof bedtimeRequestSchema>;
 export type BedtimeResponse = z.infer<typeof bedtimeResponseSchema>;
+export type IllustrationRequest = z.infer<typeof illustrationRequestSchema>;
+export type IllustrationResponse = z.infer<typeof illustrationResponseSchema>;
