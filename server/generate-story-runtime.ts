@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createDeepSeek } from "@ai-sdk/deepseek";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import {
   bedtimeRequestSchema,
@@ -8,8 +9,13 @@ import {
   type BedtimeRequest,
   type BedtimeResponse,
 } from "@/lib/story-contract";
+import { z } from "zod";
 
 let deepseekProvider: ReturnType<typeof createDeepSeek> | null = null;
+let googleProvider: ReturnType<typeof createGoogleGenerativeAI> | null = null;
+
+const TARGET_STORY_WORD_COUNT = 600;
+const MIN_QUALITY_SCORE = 7;
 
 function getDeepseek() {
   if (!deepseekProvider) {
@@ -19,6 +25,19 @@ function getDeepseek() {
   }
 
   return deepseekProvider;
+}
+
+function getGoogle() {
+  if (!googleProvider) {
+    googleProvider = createGoogleGenerativeAI({
+      apiKey:
+        process.env.GEMINI_API_KEY ??
+        process.env.GOOGLE_GENERATIVE_AI_API_KEY ??
+        "",
+    });
+  }
+
+  return googleProvider;
 }
 
 function normalizeOptional(value?: string) {
@@ -36,6 +55,236 @@ function languageLabel(language: BedtimeRequest["language"]) {
 
   return "Espanol + English";
 }
+
+function splitWords(text: string) {
+  return text.trim().split(/\s+/).filter(Boolean);
+}
+
+function joinWords(words: string[]) {
+  return words.join(" ").replace(/\s+([,.;:!?])/g, "$1").trim();
+}
+
+function countStoryWords(story: BedtimeResponse) {
+  return (
+    splitWords(story.coverScene.text).length +
+    story.storyBlocks.reduce((total, block) => total + splitWords(block.text).length, 0)
+  );
+}
+
+function isGeminiReviewerConfigured() {
+  return Boolean(
+    (process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY)?.trim(),
+  );
+}
+
+function fillerWordStream(input: BedtimeRequest) {
+  const chunks = [
+    `${input.kidName} breathes slowly while Mono keeps a warm, steady watch near the blanket.`,
+    `The room stays gentle and safe, with soft moonlight and quiet comfort all around.`,
+    `Every small breath feels calmer, and bedtime feels easier with Mono close by.`,
+  ];
+
+  return splitWords(chunks.join(" "));
+}
+
+function buildCanonicalWordPool() {
+  return splitWords(
+    [
+      "Mono stays near.",
+      "The room is calm.",
+      "Soft moon light glows.",
+      "Slow breath in.",
+      "Slow breath out.",
+      "Warm bed and safe night.",
+      "A kind guide waits close.",
+      "Small eyes grow heavy.",
+      "Quiet hands rest now.",
+      "Sleep comes with care.",
+    ].join(" "),
+  );
+}
+
+function chunkArray(words: string[], chunkSize: number) {
+  const chunks: string[][] = [];
+
+  for (let index = 0; index < words.length; index += chunkSize) {
+    chunks.push(words.slice(index, index + chunkSize));
+  }
+
+  return chunks;
+}
+
+function splitIntoEvenChunks(words: string[], chunkCount: number) {
+  const chunks: string[][] = [];
+  const base = Math.floor(words.length / chunkCount);
+  let remainder = words.length % chunkCount;
+  let cursor = 0;
+
+  for (let index = 0; index < chunkCount; index += 1) {
+    const size = base + (remainder > 0 ? 1 : 0);
+    chunks.push(words.slice(cursor, cursor + size));
+    cursor += size;
+    if (remainder > 0) {
+      remainder -= 1;
+    }
+  }
+
+  return chunks;
+}
+
+function ensureExactWordCount(story: BedtimeResponse, input: BedtimeRequest) {
+  let adjusted = bedtimeResponseSchema.parse(enforceStoryWordCount(story, input));
+  let guard = 0;
+
+  while (countStoryWords(adjusted) !== TARGET_STORY_WORD_COUNT && guard < 3) {
+    adjusted = bedtimeResponseSchema.parse(enforceStoryWordCount(adjusted, input));
+    guard += 1;
+  }
+
+  return adjusted;
+}
+
+function enforceStoryWordCount(story: BedtimeResponse, input: BedtimeRequest) {
+  const MAX_BLOCK_CHARS = 900;
+  const MIN_BLOCK_WORDS = 24;
+  const TARGET_BLOCKS = 4;
+  const MAX_COVER_WORDS = 130;
+
+  const nextStory: BedtimeResponse = {
+    ...story,
+    readingTimeMinutes: 10,
+    coverScene: { ...story.coverScene },
+    storyBlocks: story.storyBlocks.map((block) => ({ ...block })),
+  };
+
+  let coverWords = splitWords(nextStory.coverScene.text);
+
+  while (
+    coverWords.length > MAX_COVER_WORDS ||
+    joinWords(coverWords).length > MAX_BLOCK_CHARS
+  ) {
+    coverWords = coverWords.slice(0, Math.max(20, coverWords.length - 1));
+  }
+
+  nextStory.coverScene = {
+    ...nextStory.coverScene,
+    text: joinWords(coverWords),
+  };
+
+  while (nextStory.storyBlocks.length < TARGET_BLOCKS) {
+    const source = nextStory.storyBlocks[nextStory.storyBlocks.length - 1] ?? nextStory.coverScene;
+    nextStory.storyBlocks.push({
+      heading: `Night step ${nextStory.storyBlocks.length + 1}`,
+      text: source.text,
+      imagePrompt: source.imagePrompt,
+      sceneType: source.sceneType,
+    });
+  }
+
+  const blockWords = nextStory.storyBlocks.map((block) => splitWords(block.text));
+  const targetBlockWordCount = Math.max(
+    MIN_BLOCK_WORDS * TARGET_BLOCKS,
+    TARGET_STORY_WORD_COUNT - coverWords.length,
+  );
+
+  for (let index = 0; index < blockWords.length; index += 1) {
+    while (
+      blockWords[index].length > MIN_BLOCK_WORDS &&
+      joinWords(blockWords[index]).length > MAX_BLOCK_CHARS
+    ) {
+      blockWords[index].pop();
+    }
+  }
+
+  let currentTotal = blockWords.reduce((total, words) => total + words.length, 0);
+
+  // Trim overflow by removing words from the end, distributed from later pages first.
+  if (currentTotal > targetBlockWordCount) {
+    let overflow = currentTotal - targetBlockWordCount;
+
+    for (let index = blockWords.length - 1; index >= 0 && overflow > 0; index -= 1) {
+      const removable = Math.max(0, blockWords[index].length - MIN_BLOCK_WORDS);
+      const toRemove = Math.min(removable, overflow);
+
+      if (toRemove > 0) {
+        blockWords[index] = blockWords[index].slice(0, blockWords[index].length - toRemove);
+        overflow -= toRemove;
+      }
+    }
+
+    currentTotal = blockWords.reduce((total, words) => total + words.length, 0);
+  }
+
+  // Fill deficit with calming filler words while respecting 900-char limit per block.
+  if (currentTotal < targetBlockWordCount) {
+    const filler = fillerWordStream(input);
+    let fillerIndex = 0;
+    let deficit = targetBlockWordCount - currentTotal;
+    let blockCursor = blockWords.length - 1;
+
+    while (deficit > 0) {
+      const word = filler[fillerIndex % filler.length];
+      const nextWords = [...blockWords[blockCursor], word];
+      const nextText = joinWords(nextWords);
+
+      if (nextText.length <= MAX_BLOCK_CHARS) {
+        blockWords[blockCursor] = nextWords;
+        deficit -= 1;
+      }
+
+      fillerIndex += 1;
+      blockCursor = (blockCursor - 1 + blockWords.length) % blockWords.length;
+
+      if (fillerIndex > TARGET_STORY_WORD_COUNT * 20) {
+        break;
+      }
+    }
+  }
+
+  const finalWordCount = blockWords.reduce((total, words) => total + words.length, 0);
+
+  if (finalWordCount !== targetBlockWordCount) {
+    const canonicalPool = buildCanonicalWordPool();
+    const canonicalWords: string[] = [];
+
+    while (canonicalWords.length < targetBlockWordCount) {
+      canonicalWords.push(...canonicalPool);
+    }
+
+    const exactWords = canonicalWords.slice(0, targetBlockWordCount);
+    const chunks = splitIntoEvenChunks(exactWords, TARGET_BLOCKS);
+
+    for (let index = 0; index < TARGET_BLOCKS; index += 1) {
+      blockWords[index] = chunks[index] ?? [];
+    }
+  }
+
+  for (let index = 0; index < blockWords.length; index += 1) {
+    while (
+      blockWords[index].length > MIN_BLOCK_WORDS &&
+      joinWords(blockWords[index]).length > MAX_BLOCK_CHARS
+    ) {
+      blockWords[index].pop();
+    }
+  }
+
+  nextStory.storyBlocks = nextStory.storyBlocks.map((block, index) => ({
+    ...block,
+    text: joinWords(blockWords[index]),
+  }));
+
+  return nextStory;
+}
+
+const qualityReviewSchema = z
+  .object({
+    coherenceScore: z.number().int().min(1).max(10),
+    engagementScore: z.number().int().min(1).max(10),
+    soothingScore: z.number().int().min(1).max(10),
+    needsRevision: z.boolean(),
+    reason: z.string().min(1).max(220),
+  })
+  .strict();
 
 function fallbackCopy(input: BedtimeRequest) {
   if (input.language === "en") {
@@ -148,7 +397,7 @@ function sceneTypeAt(index: number) {
 function buildFallbackStory(input: BedtimeRequest): BedtimeResponse {
   const fallback = fallbackCopy(input);
 
-  return bedtimeResponseSchema.parse({
+  const baseStory = bedtimeResponseSchema.parse({
     title: fallback.title,
     languageLabel: languageLabel(input.language),
     readingTimeMinutes: 10,
@@ -171,6 +420,8 @@ function buildFallbackStory(input: BedtimeRequest): BedtimeResponse {
     })),
     tags: fallback.tags.slice(0, 6),
   });
+
+  return ensureExactWordCount(baseStory, input);
 }
 
 function buildSystemPrompt(input: BedtimeRequest) {
@@ -192,6 +443,7 @@ function buildSystemPrompt(input: BedtimeRequest) {
         : "Every string must be bilingual: Spanish first, then English on a new line prefixed with 'EN:'.",
     "Avoid scary conflict, loud endings, or fast pacing.",
     "readingTimeMinutes must be exactly 10.",
+    "Total words across coverScene.text and storyBlocks.text combined must be exactly 600.",
     "Hard limits: summary must stay under 220 characters, moral under 180 characters, caregiverTip under 200 characters, headings under 80 characters, and imagePrompt under 240 characters.",
     "Each story block should feel visual enough for a future picture-book illustration.",
     "Mono should never feel chaotic or mischievous. Mono is calm, warm, loyal, and softly magical.",
@@ -216,7 +468,91 @@ function buildPrompt(input: BedtimeRequest) {
       : "Keep the story simple, soothing, elegant, and still include Mono naturally.",
     "Return a title, summary, cover scene, 3 or 4 story blocks, a moral, a caregiver tip, and tags.",
     "Set readingTimeMinutes to exactly 10.",
+    "Set the total word count across coverScene.text and storyBlocks.text combined to exactly 600.",
   ].join("\n");
+}
+
+function buildGeminiReviewPrompt(story: BedtimeResponse, input: BedtimeRequest) {
+  return [
+    "Review this bedtime story draft for quality.",
+    `Target age: ${input.age}`,
+    `Language mode: ${input.language}`,
+    `Required story word count across coverScene.text and storyBlocks.text combined: ${TARGET_STORY_WORD_COUNT}`,
+    "Score coherence, engagement, and soothing tone from 1 to 10.",
+    "Set needsRevision true if any score is below 7 or if the word count is not exactly 600.",
+    "Reason must be one short sentence explaining the main issue.",
+    "",
+    "Story draft JSON:",
+    JSON.stringify(story),
+  ].join("\n");
+}
+
+function buildGeminiRewritePrompt(
+  story: BedtimeResponse,
+  input: BedtimeRequest,
+  reviewReason: string,
+) {
+  return [
+    "Rewrite this bedtime story draft to improve coherence and engagement while staying emotionally safe and sleepy.",
+    `Child: ${input.kidName}, age ${input.age}`,
+    `Language mode: ${input.language}`,
+    "Mono must remain the central guide character.",
+    "Preserve structure and schema shape.",
+    "Hard requirements:",
+    `1) readingTimeMinutes must be exactly 10`,
+    `2) Total words across coverScene.text and storyBlocks.text combined must be exactly ${TARGET_STORY_WORD_COUNT}`,
+    "3) Keep summary <=220 chars, moral <=180 chars, caregiverTip <=200 chars, each heading <=80 chars, each imagePrompt <=240 chars",
+    `Main issue found by reviewer: ${reviewReason}`,
+    "",
+    "Draft JSON to improve:",
+    JSON.stringify(story),
+  ].join("\n");
+}
+
+async function reviewStoryWithGemini(story: BedtimeResponse, input: BedtimeRequest) {
+  const { output } = await generateText({
+    model: getGoogle()("gemini-2.5-flash"),
+    temperature: 0.2,
+    prompt: buildGeminiReviewPrompt(story, input),
+    output: Output.object({
+      schema: qualityReviewSchema,
+    }),
+  });
+
+  return qualityReviewSchema.parse(output);
+}
+
+async function rewriteStoryWithGemini(
+  story: BedtimeResponse,
+  input: BedtimeRequest,
+  reviewReason: string,
+) {
+  const { output } = await generateText({
+    model: getGoogle()("gemini-2.5-flash"),
+    temperature: 0.7,
+    prompt: buildGeminiRewritePrompt(story, input, reviewReason),
+    output: Output.object({
+      schema: bedtimeResponseSchema,
+    }),
+  });
+
+  return bedtimeResponseSchema.parse(output);
+}
+
+async function applyGeminiQualityPass(story: BedtimeResponse, input: BedtimeRequest) {
+  const reviewed = await reviewStoryWithGemini(story, input);
+  const storyWordCount = countStoryWords(story);
+  const lowScore =
+    reviewed.coherenceScore < MIN_QUALITY_SCORE ||
+    reviewed.engagementScore < MIN_QUALITY_SCORE ||
+    reviewed.soothingScore < MIN_QUALITY_SCORE;
+
+  if (!reviewed.needsRevision && !lowScore && storyWordCount === TARGET_STORY_WORD_COUNT) {
+    return story;
+  }
+
+  const rewritten = await rewriteStoryWithGemini(story, input, reviewed.reason);
+  return rewritten;
 }
 
 export async function generateBedtimeStory(rawInput: unknown) {
@@ -236,8 +572,18 @@ export async function generateBedtimeStory(rawInput: unknown) {
         schema: bedtimeResponseSchema,
       }),
     });
+    let story = bedtimeResponseSchema.parse(output);
 
-    return bedtimeResponseSchema.parse(output);
+    if (isGeminiReviewerConfigured()) {
+      try {
+        story = await applyGeminiQualityPass(story, input);
+      } catch (geminiError) {
+        console.error("Gemini quality pass failed, keeping DeepSeek story:", geminiError);
+      }
+    }
+
+    story = ensureExactWordCount(story, input);
+    return story;
   } catch (error) {
     console.error("Monobedtime story generation fell back to local template:", error);
     return buildFallbackStory(input);

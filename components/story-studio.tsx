@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   startTransition,
@@ -36,6 +36,10 @@ function toApiPayload(form: BedtimeRequest) {
   };
 }
 
+function countWords(text: string) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
 type IllustrationState = {
   cover: IllustrationResponse | null;
   blocks: Record<number, IllustrationResponse | null>;
@@ -43,15 +47,23 @@ type IllustrationState = {
   note: string | null;
 };
 
+type AIStatus = {
+  storyWriterConfigured: boolean;
+  storyReviewerConfigured: boolean;
+  imageGeneratorConfigured: boolean;
+  subscriptionConfigured: boolean;
+};
+
 const panelClass =
-  "rounded-[36px] border border-black/8 bg-white/68 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-2xl lg:p-8";
+  "rounded-[32px] border border-black/8 bg-white/72 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur-2xl lg:p-8";
 
 const fieldClass =
-  "w-full rounded-2xl border border-black/8 bg-white/72 px-4 py-3 text-black outline-none transition placeholder:text-black/32 focus:border-[#FF7A00] focus:bg-white";
+  "w-full rounded-2xl border border-black/8 bg-white/72 px-4 py-3 text-black outline-none transition placeholder:text-black/35 focus:border-[#FF7A00] focus:bg-white";
 
 export function StoryStudio() {
   const [form, setForm] = useState<BedtimeRequest>(initialForm);
   const [story, setStory] = useState<BedtimeResponse | null>(null);
+  const [aiStatus, setAIStatus] = useState<AIStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasGeneratedStory, setHasGeneratedStory] = useState(false);
@@ -66,13 +78,50 @@ export function StoryStudio() {
   const previewBadge = useMemo(() => {
     const label =
       form.language === "es"
-        ? "Solo espanol"
+        ? "Spanish"
         : form.language === "en"
-          ? "Solo ingles"
-          : "Bilingue";
+          ? "English"
+          : "Bilingual";
 
-    return `${label} · ${form.age} anos · ${form.location}`;
+    return `${label} | age ${form.age} | ${form.location}`;
   }, [form.age, form.language, form.location]);
+
+  const storyWordCount = useMemo(() => {
+    if (!story) {
+      return 0;
+    }
+
+    return story.storyBlocks.reduce(
+      (total, block) => total + countWords(block.text),
+      0,
+    );
+  }, [story]);
+
+  const keyStatusMessage = useMemo(() => {
+    if (!aiStatus) {
+      return "Checking AI key configuration...";
+    }
+
+    const missing: string[] = [];
+
+    if (!aiStatus.storyWriterConfigured) {
+      missing.push("DEEPSEEK_API_KEY");
+    }
+
+    if (!aiStatus.storyReviewerConfigured) {
+      missing.push("GEMINI_API_KEY");
+    }
+
+    if (!aiStatus.subscriptionConfigured) {
+      missing.push("Stripe subscription keys");
+    }
+
+    if (missing.length === 0) {
+      return "All core keys are configured.";
+    }
+
+    return `Missing: ${missing.join(", ")}`;
+  }, [aiStatus]);
 
   function updateField<K extends keyof BedtimeRequest>(
     key: K,
@@ -83,6 +132,34 @@ export function StoryStudio() {
       [key]: value,
     }));
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAIStatus() {
+      try {
+        const response = await fetch("/api/ai-status", {
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!cancelled && response.ok) {
+          setAIStatus(data as AIStatus);
+        }
+      } catch {
+        if (!cancelled) {
+          setAIStatus(null);
+        }
+      }
+    }
+
+    void loadAIStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -265,13 +342,18 @@ export function StoryStudio() {
                 bedtime studio
               </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight text-black">
-                Build a story that feels personal before the first line is read.
+                Start with a blank canvas, then generate a 10-minute story.
               </h2>
             </div>
           </div>
           <div className="hidden rounded-full border border-black/8 bg-white/72 px-4 py-2 text-xs font-medium text-black/60 shadow-[0_10px_25px_rgba(15,23,42,0.05)] md:block">
             {previewBadge}
           </div>
+        </div>
+
+        <div className="mb-5 rounded-2xl border border-black/8 bg-white/76 px-4 py-3 text-sm text-black/66 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+          <p className="font-medium text-black">Story target: exactly 600 words in the story body.</p>
+          <p className="mt-1">{keyStatusMessage}</p>
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
@@ -472,28 +554,22 @@ export function StoryStudio() {
                 story canvas
               </div>
               <h3 className="mt-3 text-3xl font-semibold text-black">
-                {deferredName || "Your little one"} gets a softer bedtime with Mono close by.
+                {deferredName || "Your little one"} gets a coherent and gentle bedtime story with Mono.
               </h3>
             </div>
           </div>
 
           <p className="mt-4 max-w-xl text-base leading-7 text-black/62">
-            This area stays blank until you generate a story. Once you press Create 10-minute story, Monobedtime writes a personalized story first and then tries premium scene art.
+            This area stays blank until you generate a story. DeepSeek writes first, Gemini reviews coherence and engagement, then scene art is generated.
           </p>
 
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
-            {[
-              "Mono is the recurring guide",
-              "Every story world feels branded",
-              "Mono stays recognizable from story to story",
-            ].map((item) => (
-              <div
-                key={item}
-                className="rounded-2xl border border-black/8 bg-white/74 px-4 py-4 text-sm text-black/66 shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
-              >
-                {item}
-              </div>
-            ))}
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-black/8 bg-white/74 px-4 py-4 text-sm text-black/66 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              Target length: exactly 600 words across story pages.
+            </div>
+            <div className="rounded-2xl border border-black/8 bg-white/74 px-4 py-4 text-sm text-black/66 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              Companion system: Mono leads the story, Luffy cues interaction quietly.
+            </div>
           </div>
         </div>
 
@@ -520,7 +596,7 @@ export function StoryStudio() {
                     ))}
                   </div>
 
-                  <div className="mt-5 grid gap-3 md:grid-cols-3">
+                  <div className="mt-5 grid gap-3 md:grid-cols-4">
                     <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
                       <div className="text-xs uppercase tracking-[0.18em] text-black/44">
                         Language
@@ -535,6 +611,14 @@ export function StoryStudio() {
                       </div>
                       <div className="mt-2 text-lg font-medium text-black">
                         {story.readingTimeMinutes} min
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                      <div className="text-xs uppercase tracking-[0.18em] text-black/44">
+                        Story words
+                      </div>
+                      <div className="mt-2 text-lg font-medium text-black">
+                        {storyWordCount}
                       </div>
                     </div>
                     <div className="rounded-2xl border border-black/8 bg-white/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
@@ -607,10 +691,10 @@ export function StoryStudio() {
         ) : (
           <div className="rounded-[36px] border border-dashed border-black/10 bg-white/48 p-8 text-black/54 shadow-[0_18px_50px_rgba(15,23,42,0.05)] backdrop-blur-xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#FF7A00]">
-              result
+              blank canvas
             </p>
             <p className="mt-4 text-lg leading-8">
-              The story appears here with Mono at the center, clear scene cards, and a gentle fallback so the experience still works when live generation stumbles.
+              Your generated story appears here after you submit the form. Target output: 10 minutes and exactly 600 story words.
             </p>
           </div>
         )}
@@ -618,3 +702,4 @@ export function StoryStudio() {
     </div>
   );
 }
+

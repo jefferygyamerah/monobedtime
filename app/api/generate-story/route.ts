@@ -8,6 +8,7 @@ function toErrorMessage(error: unknown) {
   if (error instanceof ZodError) {
     const firstIssue = error.issues[0];
     const field = firstIssue?.path.join(".");
+    const issueMessage = firstIssue?.message;
 
     if (field === "age") {
       return "Age must be between 0 and 12.";
@@ -15,6 +16,10 @@ function toErrorMessage(error: unknown) {
 
     if (field === "summary") {
       return "The story draft came back too long, so we could not use it. Please try again.";
+    }
+
+    if (field) {
+      return `Story validation failed at ${field}: ${issueMessage ?? "invalid value"}`;
     }
 
     return "We could not shape the story into the expected bedtime format. Please try again.";
