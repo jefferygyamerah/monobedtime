@@ -815,7 +815,7 @@ export function NightlyScreen() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, filter: "blur(10px)", scale: 0.95 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="mx-auto flex w-full max-w-md flex-col gap-6 rounded-[2rem] border border-white/24 bg-slate-900/60 px-5 py-6 shadow-[0_28px_90px_rgba(7,10,26,0.48)] backdrop-blur-xl sm:gap-8 sm:px-6 sm:py-8"
+            className="mx-auto flex w-full max-w-md flex-col gap-6 rounded-[2rem] border border-white/24 bg-[#101a33]/82 px-5 py-6 shadow-[0_28px_90px_rgba(7,10,26,0.48)] backdrop-blur-md sm:gap-8 sm:px-6 sm:py-8"
           >
             <div className="space-y-2 text-center">
               <div className="mb-3 flex justify-center">
@@ -829,13 +829,13 @@ export function NightlyScreen() {
               </p>
             </div>
 
-            <div className="rounded-xl border border-white/30 bg-white/16 px-4 py-3 text-xs text-white/95">
+            <div className="rounded-xl border border-white/22 bg-slate-950/46 px-4 py-3 text-xs text-white/95">
               <p>Profile: {profile?.age || "0 years"}, {profileLanguageLabel}</p>
               <p className="mt-1">Roots: {profile?.culture || "family bedtime traditions"}</p>
               <button
                 type="button"
                 onClick={restartSetup}
-                className="mt-3 inline-flex rounded-full border border-white/45 bg-white/8 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white transition hover:bg-white/16"
+                className="mt-3 inline-flex rounded-full border border-white/28 bg-slate-950/50 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white transition hover:bg-slate-950/68"
               >
                 Edit profile
               </button>
@@ -853,8 +853,8 @@ export function NightlyScreen() {
                   onClick={() => setMood(item.id as Mood)}
                   className={`flex min-w-0 flex-1 flex-col items-center gap-2 rounded-2xl border px-2 py-3 transition-all duration-300 ease-out sm:py-4 ${
                     mood === item.id
-                      ? "border-white/45 bg-white/20 text-white shadow-[0_0_20px_rgba(255,255,255,0.09)]"
-                      : "border-white/25 bg-white/8 text-white/90 hover:bg-white/15 hover:text-white"
+                      ? "border-white/45 bg-white/18 text-white shadow-[0_0_20px_rgba(255,255,255,0.09)]"
+                      : "border-white/22 bg-slate-950/42 text-white/90 hover:bg-slate-950/58 hover:text-white"
                   }`}
                   aria-label={`Set mood to ${item.label}`}
                 >
@@ -871,7 +871,7 @@ export function NightlyScreen() {
                 <span className="text-xs uppercase tracking-[0.18em] text-white/95">
                   Story seed
                 </span>
-                <span className="rounded-full border border-white/16 bg-white/8 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-white/78">
+                <span className="rounded-full border border-white/18 bg-slate-950/48 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-white/82">
                   Detailed mode
                 </span>
               </div>
@@ -880,7 +880,7 @@ export function NightlyScreen() {
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 placeholder="Share the bedtime idea. Example: Mono helps the nursery settle while little Luffy watches the moon through the window."
-                className="min-h-[132px] w-full resize-none rounded-2xl border border-white/35 bg-white/20 px-4 py-4 text-sm leading-6 text-white placeholder:text-white/70 transition-all focus:border-indigo-100 focus:bg-white/24 focus:outline-none sm:px-5"
+                className="min-h-[132px] w-full resize-none rounded-2xl border border-white/22 bg-slate-950/76 px-4 py-4 text-sm leading-6 text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all focus:border-indigo-100/80 focus:bg-slate-950/88 focus:outline-none sm:px-5"
                 aria-label="Story prompt input"
               />
             </label>
@@ -914,7 +914,7 @@ export function NightlyScreen() {
                   <p className="text-sm font-medium text-white">{illustrationStatus.title}</p>
                   <p className="text-sm leading-6 text-white/78">{illustrationStatus.detail}</p>
                 </div>
-                <div className="rounded-full border border-white/14 bg-white/8 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-white/72">
+                <div className="rounded-full border border-white/18 bg-slate-950/45 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-white/82">
                   {usage?.subscribed
                     ? "Unlimited"
                     : usage
@@ -931,7 +931,7 @@ export function NightlyScreen() {
                       void openSubscriptionPortal();
                     }}
                     disabled={billingPending}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/24 bg-white/10 px-4 py-2.5 text-sm text-white transition hover:bg-white/14 disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/24 bg-slate-950/54 px-4 py-2.5 text-sm text-white transition hover:bg-slate-950/68 disabled:opacity-50"
                   >
                     <Sparkles className="h-4 w-4" />
                     {billingPending ? "Opening..." : "Manage subscription"}
@@ -956,7 +956,7 @@ export function NightlyScreen() {
               ) : null}
             </div>
 
-            <div className="rounded-xl border border-white/30 bg-white/16 px-4 py-3 text-xs text-white/95">
+            <div className="rounded-xl border border-white/22 bg-slate-950/46 px-4 py-3 text-xs text-white/95">
               <p>Target: 10 minutes and exactly 600 story words across the reading pages.</p>
               <p className="mt-1">{serviceStatusMessage}</p>
               <p className="mt-1">

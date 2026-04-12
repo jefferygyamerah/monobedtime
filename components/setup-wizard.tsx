@@ -99,7 +99,7 @@ export function SetupWizard({
       <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" />
 
       <div className="safe-top safe-bottom-lg safe-left safe-right relative z-10 mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-4 py-5 sm:px-6 sm:py-8">
-        <div className="overflow-hidden rounded-[2rem] border border-white/14 bg-white/8 px-5 py-6 shadow-[0_28px_90px_rgba(4,8,24,0.52)] backdrop-blur-xl sm:px-6 sm:py-7">
+        <div className="overflow-hidden rounded-[2rem] border border-white/16 bg-[#101a33]/88 px-5 py-6 shadow-[0_28px_90px_rgba(4,8,24,0.52)] backdrop-blur-md sm:px-6 sm:py-7">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[0.7rem] font-semibold uppercase tracking-[0.34em] text-indigo-200/80">
@@ -108,11 +108,11 @@ export function SetupWizard({
               <h1 className="mt-3 text-3xl font-semibold leading-tight text-white sm:text-[2.15rem]">
                 Set the mood for the first story.
               </h1>
-              <p className="mt-3 max-w-[28ch] text-sm leading-6 text-white/72 sm:text-[0.95rem]">
+              <p className="mt-3 max-w-[28ch] text-sm leading-6 text-white/82 sm:text-[0.95rem]">
                 A few quiet details help Mono make the experience feel personal, cozy, and easy to begin.
               </p>
             </div>
-            <div className="shrink-0 rounded-full border border-white/14 bg-white/10 px-3 py-2 text-right">
+            <div className="shrink-0 rounded-full border border-white/18 bg-slate-950/45 px-3 py-2 text-right">
               <div className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-white/50">
                 progress
               </div>
@@ -152,13 +152,13 @@ export function SetupWizard({
                     <h2 className="text-[1.95rem] font-light leading-tight text-white sm:text-[2.1rem]">
                       {activeStep.title}
                     </h2>
-                    <p className="max-w-[26ch] text-sm leading-6 text-white/70">
+                    <p className="max-w-[26ch] text-sm leading-6 text-white/78">
                       {activeStep.description}
                     </p>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-white/80" htmlFor="child-name">
+                    <label className="text-sm font-medium text-white/92" htmlFor="child-name">
                       Child name
                     </label>
                     <input
@@ -168,9 +168,9 @@ export function SetupWizard({
                       value={formData.childName}
                       onChange={(event) => updateForm("childName", event.target.value)}
                       placeholder="For example, Luna"
-                      className="w-full rounded-2xl border border-white/12 bg-white/8 px-4 py-4 text-[1.4rem] text-white placeholder:text-white/38 outline-none transition focus:border-indigo-200/60 focus:bg-white/10 focus:ring-2 focus:ring-indigo-300/20"
+                      className="w-full rounded-2xl border border-white/20 bg-slate-950/78 px-4 py-4 text-[1.4rem] text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition focus:border-indigo-200/70 focus:bg-slate-950/90 focus:ring-2 focus:ring-indigo-300/18"
                     />
-                    <p className="text-xs leading-5 text-white/52">{activeStep.helper}</p>
+                    <p className="text-xs leading-5 text-white/64">{activeStep.helper}</p>
                   </div>
                 </motion.div>
               ) : null}
@@ -192,14 +192,14 @@ export function SetupWizard({
                     <h2 className="text-[1.75rem] font-light leading-tight text-white sm:text-[1.95rem]">
                       {activeStep.title}
                     </h2>
-                    <p className="max-w-[28ch] text-sm leading-6 text-white/70">
+                    <p className="max-w-[28ch] text-sm leading-6 text-white/78">
                       {activeStep.description}
                     </p>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-3">
-                      <label className="text-sm font-medium text-white/80" htmlFor="child-age">
+                      <label className="text-sm font-medium text-white/92" htmlFor="child-age">
                         Age
                       </label>
                       <input
@@ -209,12 +209,12 @@ export function SetupWizard({
                         value={formData.age}
                         onChange={(event) => updateForm("age", event.target.value)}
                         placeholder="2 months old"
-                        className="w-full rounded-2xl border border-white/12 bg-white/8 px-4 py-4 text-lg text-white placeholder:text-white/38 outline-none transition focus:border-indigo-200/60 focus:bg-white/10 focus:ring-2 focus:ring-indigo-300/20"
+                        className="w-full rounded-2xl border border-white/20 bg-slate-950/78 px-4 py-4 text-lg text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition focus:border-indigo-200/70 focus:bg-slate-950/90 focus:ring-2 focus:ring-indigo-300/18"
                       />
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-sm font-medium text-white/80" htmlFor="language">
+                      <label className="text-sm font-medium text-white/92" htmlFor="language">
                         Language
                       </label>
                       <input
@@ -223,12 +223,12 @@ export function SetupWizard({
                         value={formData.language}
                         onChange={(event) => updateForm("language", event.target.value)}
                         placeholder="Spanish and English"
-                        className="w-full rounded-2xl border border-white/12 bg-white/8 px-4 py-4 text-lg text-white placeholder:text-white/38 outline-none transition focus:border-indigo-200/60 focus:bg-white/10 focus:ring-2 focus:ring-indigo-300/20"
+                        className="w-full rounded-2xl border border-white/20 bg-slate-950/78 px-4 py-4 text-lg text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition focus:border-indigo-200/70 focus:bg-slate-950/90 focus:ring-2 focus:ring-indigo-300/18"
                       />
                     </div>
                   </div>
 
-                  <p className="text-xs leading-5 text-white/52">{activeStep.helper}</p>
+                  <p className="text-xs leading-5 text-white/64">{activeStep.helper}</p>
                 </motion.div>
               ) : null}
 
@@ -249,13 +249,13 @@ export function SetupWizard({
                     <h2 className="text-[1.7rem] font-light leading-tight text-white sm:text-[1.9rem]">
                       {activeStep.title}
                     </h2>
-                    <p className="max-w-[29ch] text-sm leading-6 text-white/70">
+                    <p className="max-w-[29ch] text-sm leading-6 text-white/78">
                       {activeStep.description}
                     </p>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-white/80" htmlFor="culture">
+                    <label className="text-sm font-medium text-white/92" htmlFor="culture">
                       Family roots or places
                     </label>
                     <input
@@ -265,9 +265,9 @@ export function SetupWizard({
                       value={formData.culture}
                       onChange={(event) => updateForm("culture", event.target.value)}
                       placeholder="Optional: Panama City, Colombian heritage"
-                      className="w-full rounded-2xl border border-white/12 bg-white/8 px-4 py-4 text-lg text-white placeholder:text-white/38 outline-none transition focus:border-indigo-200/60 focus:bg-white/10 focus:ring-2 focus:ring-indigo-300/20"
+                      className="w-full rounded-2xl border border-white/20 bg-slate-950/78 px-4 py-4 text-lg text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition focus:border-indigo-200/70 focus:bg-slate-950/90 focus:ring-2 focus:ring-indigo-300/18"
                     />
-                    <p className="text-xs leading-5 text-white/52">{activeStep.helper}</p>
+                    <p className="text-xs leading-5 text-white/64">{activeStep.helper}</p>
                   </div>
                 </motion.div>
               ) : null}
@@ -279,7 +279,7 @@ export function SetupWizard({
             whileTap={{ scale: 0.985 }}
             onClick={handleNext}
             disabled={!canContinue}
-            className="group mt-6 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-white/18 bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(255,255,255,0.08))] px-5 py-4 text-white shadow-[0_12px_34px_rgba(9,14,32,0.34)] transition hover:border-white/24 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.24),rgba(255,255,255,0.1))] disabled:cursor-not-allowed disabled:opacity-45 sm:mt-8"
+            className="group mt-6 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-indigo-100/30 bg-[linear-gradient(180deg,rgba(165,180,252,0.36),rgba(79,70,229,0.28))] px-5 py-4 text-white shadow-[0_12px_34px_rgba(9,14,32,0.34)] transition hover:border-indigo-100/42 hover:bg-[linear-gradient(180deg,rgba(191,219,254,0.42),rgba(99,102,241,0.34))] disabled:cursor-not-allowed disabled:opacity-45 sm:mt-8"
           >
             <span className="text-sm font-semibold tracking-[0.18em] uppercase">
               {activeStep.buttonLabel}
