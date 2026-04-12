@@ -2,15 +2,19 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Building2,
   ChevronLeft,
   ChevronRight,
+  Flame,
   MoonStar,
   SlidersVertical,
   Sparkles,
+  Trees,
   Volume2,
   Waves,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import type { Soundscape } from "@/components/use-bedtime-audio";
 
 function IconButton({
   ariaLabel,
@@ -36,26 +40,25 @@ function IconButton({
   );
 }
 
-function AnalogToggle({
+function SoundscapeOption({
   label,
   description,
-  enabled,
+  selected,
   icon,
-  onChange,
+  onSelect,
 }: {
   label: string;
   description: string;
-  enabled: boolean;
+  selected: boolean;
   icon: ReactNode;
-  onChange: () => void;
+  onSelect: () => void;
 }) {
   return (
     <button
       type="button"
-      role="switch"
-      aria-checked={enabled}
+      aria-pressed={selected}
       aria-label={label}
-      onClick={onChange}
+      onClick={onSelect}
       className="glass-panel flex w-full items-center justify-between gap-4 rounded-[1.5rem] px-4 py-4 text-left"
     >
       <div className="flex items-center gap-3">
@@ -72,12 +75,12 @@ function AnalogToggle({
 
       <motion.span
         className={`relative flex h-8 w-16 items-center rounded-full border px-1 ${
-          enabled
+          selected
             ? "border-[#ffca91]/50 bg-[#ffca91]/22"
             : "border-white/12 bg-white/8"
         }`}
         animate={{
-          boxShadow: enabled
+          boxShadow: selected
             ? "0 0 20px rgba(255, 202, 145, 0.18)"
             : "0 0 0 rgba(0, 0, 0, 0)",
         }}
@@ -85,7 +88,7 @@ function AnalogToggle({
       >
         <motion.span
           className="block h-6 w-6 rounded-full bg-[#f7eedf] shadow-[0_6px_18px_rgba(10,12,25,0.35)]"
-          animate={{ x: enabled ? 30 : 0 }}
+          animate={{ x: selected ? 30 : 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 22 }}
         />
       </motion.span>
@@ -94,33 +97,29 @@ function AnalogToggle({
 }
 
 export function GlassMenu({
+  activeSoundscape,
   audioDrawerOpen,
   canGoNext,
   canGoPrev,
   currentPage,
-  guitarEnabled,
   onAudioToggle,
   onNext,
   onPrev,
-  onToggleGuitar,
-  onToggleVinyl,
+  onSelectSoundscape,
   totalPages,
   visible,
-  vinylEnabled,
 }: {
+  activeSoundscape: Soundscape | null;
   audioDrawerOpen: boolean;
   canGoNext: boolean;
   canGoPrev: boolean;
   currentPage: number;
-  guitarEnabled: boolean;
   onAudioToggle: () => void;
   onNext: () => void;
   onPrev: () => void;
-  onToggleGuitar: () => void;
-  onToggleVinyl: () => void;
+  onSelectSoundscape: (soundscape: Soundscape) => void;
   totalPages: number;
   visible: boolean;
-  vinylEnabled: boolean;
 }) {
   const controlsVisible = visible || audioDrawerOpen;
 
@@ -177,7 +176,7 @@ export function GlassMenu({
       >
         <div className="glass-panel inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[11px] uppercase tracking-[0.22em] text-[#f7ebcf]/80">
           <Sparkles className="h-4 w-4" />
-          tap edges or swipe slowly
+          tap edges, swipe, or use arrow keys
         </div>
       </motion.div>
 
@@ -198,8 +197,11 @@ export function GlassMenu({
                     ambiance drawer
                   </div>
                   <h2 className="mt-2 text-lg font-semibold text-[#f6ead8]">
-                    Soft audio textures
+                    Night soundscapes
                   </h2>
+                  <p className="mt-2 text-sm leading-6 text-[#cad6ff]/80">
+                    Choose one room tone for tonight. Tap the active scene again to return to silence.
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -212,19 +214,33 @@ export function GlassMenu({
               </div>
 
               <div className="space-y-3">
-                <AnalogToggle
-                  label="Acoustic Guitar Lullaby"
-                  description="A brushed, mellow line that feels like rocking in place."
-                  enabled={guitarEnabled}
-                  icon={<Volume2 className="h-5 w-5" />}
-                  onChange={onToggleGuitar}
+                <SoundscapeOption
+                  label="Quiet Forest"
+                  description="A soft canopy breeze with tiny night insects in the distance."
+                  selected={activeSoundscape === "forest"}
+                  icon={<Trees className="h-5 w-5" />}
+                  onSelect={() => onSelectSoundscape("forest")}
                 />
-                <AnalogToggle
-                  label="Vinyl Crackle"
-                  description="A tiny analog hiss to make the room feel tucked in."
-                  enabled={vinylEnabled}
+                <SoundscapeOption
+                  label="Sea Drift"
+                  description="Slow, rolling shore wash that stays calm and low."
+                  selected={activeSoundscape === "sea"}
                   icon={<Waves className="h-5 w-5" />}
-                  onChange={onToggleVinyl}
+                  onSelect={() => onSelectSoundscape("sea")}
+                />
+                <SoundscapeOption
+                  label="City Hush"
+                  description="Light distant traffic and a warm urban nighttime hum."
+                  selected={activeSoundscape === "city"}
+                  icon={<Building2 className="h-5 w-5" />}
+                  onSelect={() => onSelectSoundscape("city")}
+                />
+                <SoundscapeOption
+                  label="Fire Crackle"
+                  description="A low hearth bed with gentle crackling sparks."
+                  selected={activeSoundscape === "fire"}
+                  icon={<Flame className="h-5 w-5" />}
+                  onSelect={() => onSelectSoundscape("fire")}
                 />
               </div>
             </div>

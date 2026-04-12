@@ -31,7 +31,8 @@ html {
 
 body {
   margin: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--midnight-ink);
   color: var(--starlight);
   font-family:
@@ -117,6 +118,26 @@ a {
 
 .heartbeat-glow {
   will-change: transform, opacity;
+}
+
+.safe-top {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.safe-bottom-lg {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+.safe-right {
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+
+.safe-left {
+  padding-left: max(0.75rem, env(safe-area-inset-left));
 }
 
 @layer utilities {

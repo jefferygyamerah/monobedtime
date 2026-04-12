@@ -6,6 +6,7 @@ import { generateText, Output } from "ai";
 import {
   bedtimeRequestSchema,
   bedtimeResponseSchema,
+  sceneTypeSchema,
   type BedtimeRequest,
   type BedtimeResponse,
 } from "@/lib/story-contract";
@@ -16,6 +17,41 @@ let googleProvider: ReturnType<typeof createGoogleGenerativeAI> | null = null;
 
 const TARGET_STORY_WORD_COUNT = 600;
 const MIN_QUALITY_SCORE = 7;
+const MAX_TITLE_CHARS = 100;
+const MAX_LANGUAGE_LABEL_CHARS = 40;
+const MAX_SUMMARY_CHARS = 220;
+const MAX_MORAL_CHARS = 180;
+const MAX_CAREGIVER_TIP_CHARS = 200;
+const MAX_HEADING_CHARS = 80;
+const MAX_IMAGE_PROMPT_CHARS = 240;
+const MAX_TAG_CHARS = 24;
+const MIN_TAGS = 3;
+const MAX_TAGS = 6;
+
+const storySceneDraftSchema = z
+  .object({
+    heading: z.string().min(1).max(200),
+    text: z.string().min(1).max(2400),
+    imagePrompt: z.string().min(1).max(800),
+    sceneType: sceneTypeSchema,
+  })
+  .strict();
+
+const bedtimeResponseDraftSchema = z
+  .object({
+    title: z.string().min(1).max(200),
+    languageLabel: z.string().min(1).max(80),
+    readingTimeMinutes: z.number().int().min(2).max(12),
+    summary: z.string().min(1).max(1200),
+    moral: z.string().min(1).max(800),
+    caregiverTip: z.string().min(1).max(800),
+    coverScene: storySceneDraftSchema,
+    storyBlocks: z.array(storySceneDraftSchema).min(3).max(4),
+    tags: z.array(z.string().min(1).max(60)).min(3).max(10),
+  })
+  .strict();
+
+type BedtimeResponseDraft = z.infer<typeof bedtimeResponseDraftSchema>;
 
 function getDeepseek() {
   if (!deepseekProvider) {
@@ -62,6 +98,63 @@ function splitWords(text: string) {
 
 function joinWords(words: string[]) {
   return words.join(" ").replace(/\s+([,.;:!?])/g, "$1").trim();
+}
+
+function normalizeWhitespace(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function trimToMaxChars(value: string, maxChars: number) {
+  const normalized = normalizeWhitespace(value);
+
+  if (normalized.length <= maxChars) {
+    return normalized;
+  }
+
+  return normalized.slice(0, maxChars).trimEnd();
+}
+
+function sanitizeTags(tags: string[]) {
+  const cleaned = tags
+    .map((tag) => trimToMaxChars(tag, MAX_TAG_CHARS).toLowerCase())
+    .filter(Boolean)
+    .slice(0, MAX_TAGS);
+
+  const fallbackTags = ["mono", "bedtime", "calm"];
+
+  for (const fallbackTag of fallbackTags) {
+    if (cleaned.length >= MIN_TAGS) {
+      break;
+    }
+
+    if (!cleaned.includes(fallbackTag)) {
+      cleaned.push(fallbackTag);
+    }
+  }
+
+  return cleaned;
+}
+
+function sanitizeStoryMetadata(story: BedtimeResponseDraft | BedtimeResponse): BedtimeResponse {
+  return {
+    ...story,
+    title: trimToMaxChars(story.title, MAX_TITLE_CHARS),
+    languageLabel: trimToMaxChars(story.languageLabel, MAX_LANGUAGE_LABEL_CHARS),
+    summary: trimToMaxChars(story.summary, MAX_SUMMARY_CHARS),
+    moral: trimToMaxChars(story.moral, MAX_MORAL_CHARS),
+    caregiverTip: trimToMaxChars(story.caregiverTip, MAX_CAREGIVER_TIP_CHARS),
+    coverScene: {
+      ...story.coverScene,
+      heading: trimToMaxChars(story.coverScene.heading, MAX_HEADING_CHARS),
+      imagePrompt: trimToMaxChars(story.coverScene.imagePrompt, MAX_IMAGE_PROMPT_CHARS),
+    },
+    storyBlocks: story.storyBlocks.slice(0, 4).map((block) => ({
+      ...block,
+      heading: trimToMaxChars(block.heading, MAX_HEADING_CHARS),
+      imagePrompt: trimToMaxChars(block.imagePrompt, MAX_IMAGE_PROMPT_CHARS),
+    })),
+    tags: sanitizeTags(story.tags),
+  };
 }
 
 function countStoryWords(story: BedtimeResponse) {
@@ -132,19 +225,23 @@ function splitIntoEvenChunks(words: string[], chunkCount: number) {
   return chunks;
 }
 
-function ensureExactWordCount(story: BedtimeResponse, input: BedtimeRequest) {
-  let adjusted = bedtimeResponseSchema.parse(enforceStoryWordCount(story, input));
+function ensureExactWordCount(story: BedtimeResponseDraft | BedtimeResponse, input: BedtimeRequest) {
+  let adjusted = bedtimeResponseSchema.parse(
+    sanitizeStoryMetadata(enforceStoryWordCount(story, input)),
+  );
   let guard = 0;
 
   while (countStoryWords(adjusted) !== TARGET_STORY_WORD_COUNT && guard < 3) {
-    adjusted = bedtimeResponseSchema.parse(enforceStoryWordCount(adjusted, input));
+    adjusted = bedtimeResponseSchema.parse(
+      sanitizeStoryMetadata(enforceStoryWordCount(adjusted, input)),
+    );
     guard += 1;
   }
 
   return adjusted;
 }
 
-function enforceStoryWordCount(story: BedtimeResponse, input: BedtimeRequest) {
+function enforceStoryWordCount(story: BedtimeResponseDraft | BedtimeResponse, input: BedtimeRequest) {
   const MAX_BLOCK_CHARS = 900;
   const MIN_BLOCK_WORDS = 24;
   const TARGET_BLOCKS = 4;
@@ -398,27 +495,35 @@ function buildFallbackStory(input: BedtimeRequest): BedtimeResponse {
   const fallback = fallbackCopy(input);
 
   const baseStory = bedtimeResponseSchema.parse({
-    title: fallback.title,
-    languageLabel: languageLabel(input.language),
+    title: trimToMaxChars(fallback.title, MAX_TITLE_CHARS),
+    languageLabel: trimToMaxChars(
+      languageLabel(input.language),
+      MAX_LANGUAGE_LABEL_CHARS,
+    ),
     readingTimeMinutes: 10,
-    summary: fallback.summary,
-    moral: fallback.moral,
-    caregiverTip: fallback.caregiverTip,
+    summary: trimToMaxChars(fallback.summary, MAX_SUMMARY_CHARS),
+    moral: trimToMaxChars(fallback.moral, MAX_MORAL_CHARS),
+    caregiverTip: trimToMaxChars(fallback.caregiverTip, MAX_CAREGIVER_TIP_CHARS),
     coverScene: {
-      heading: input.language === "en" ? "Tonight with Mono" : "Esta noche con Mono",
+      heading: trimToMaxChars(
+        input.language === "en" ? "Tonight with Mono" : "Esta noche con Mono",
+        MAX_HEADING_CHARS,
+      ),
       text: fallback.summary,
-      imagePrompt:
+      imagePrompt: trimToMaxChars(
         fallback.blocks[0]?.imagePrompt ??
-        "Soft bedtime picture-book cover with Mono the monkey guide",
+          "Soft bedtime picture-book cover with Mono the monkey guide",
+        MAX_IMAGE_PROMPT_CHARS,
+      ),
       sceneType: "moon",
     },
     storyBlocks: fallback.blocks.map((block, index) => ({
-      heading: block.heading,
+      heading: trimToMaxChars(block.heading, MAX_HEADING_CHARS),
       text: block.text,
-      imagePrompt: block.imagePrompt,
+      imagePrompt: trimToMaxChars(block.imagePrompt, MAX_IMAGE_PROMPT_CHARS),
       sceneType: sceneTypeAt(index),
     })),
-    tags: fallback.tags.slice(0, 6),
+    tags: sanitizeTags(fallback.tags),
   });
 
   return ensureExactWordCount(baseStory, input);
@@ -532,11 +637,11 @@ async function rewriteStoryWithGemini(
     temperature: 0.7,
     prompt: buildGeminiRewritePrompt(story, input, reviewReason),
     output: Output.object({
-      schema: bedtimeResponseSchema,
+      schema: bedtimeResponseDraftSchema,
     }),
   });
 
-  return bedtimeResponseSchema.parse(output);
+  return ensureExactWordCount(bedtimeResponseDraftSchema.parse(output), input);
 }
 
 async function applyGeminiQualityPass(story: BedtimeResponse, input: BedtimeRequest) {
@@ -569,10 +674,10 @@ export async function generateBedtimeStory(rawInput: unknown) {
       system: buildSystemPrompt(input),
       prompt: buildPrompt(input),
       output: Output.object({
-        schema: bedtimeResponseSchema,
+        schema: bedtimeResponseDraftSchema,
       }),
     });
-    let story = bedtimeResponseSchema.parse(output);
+    let story = ensureExactWordCount(bedtimeResponseDraftSchema.parse(output), input);
 
     if (isGeminiReviewerConfigured()) {
       try {
@@ -582,7 +687,6 @@ export async function generateBedtimeStory(rawInput: unknown) {
       }
     }
 
-    story = ensureExactWordCount(story, input);
     return story;
   } catch (error) {
     console.error("Monobedtime story generation fell back to local template:", error);

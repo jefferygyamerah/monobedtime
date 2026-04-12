@@ -5,7 +5,7 @@ import {
   normalizeSessionId,
   reserveImageGeneration,
 } from "@/server/image-access";
-import { generateIllustration } from "@/server/generate-illustration-runtime";
+import { generateIllustrationWithOptions } from "@/server/generate-illustration-runtime";
 import { getSubscriptionCookieName } from "@/server/subscription-access";
 import { ZodError } from "zod";
 
@@ -36,11 +36,14 @@ export async function POST(request: Request) {
     });
 
     if (!allowance.allowed) {
+      const exhaustedMessage = allowance.usage.subscriptionConfigured
+        ? `Today's ${allowance.usage.dailyLimit} free illustrations are used up. Your story is complete - illustration resumes tomorrow.`
+        : "Illustration subscription is coming soon. Your full story still generates.";
+
       return Response.json(
         {
           code: "FREE_IMAGE_LIMIT_REACHED",
-          error:
-            "You have used all 3 free image generations for this browser session today. Start the subscription to keep going.",
+          error: exhaustedMessage,
           usage: allowance.usage,
         },
         {
@@ -49,7 +52,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const illustration = await generateIllustration(rawInput);
+    const illustration = await generateIllustrationWithOptions(rawInput, {
+      // Free tier: use Unsplash (no per-image AI cost). Subscribers: prefer AI.
+      preferUnsplash: !allowance.usage.subscribed,
+    });
     return Response.json(
       {
         ...illustration,

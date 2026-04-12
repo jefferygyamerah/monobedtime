@@ -66,6 +66,14 @@ export const illustrationResponseSchema = z
     imageDataUrl: z.string().nullable(),
     fallback: z.boolean(),
     note: z.string().min(1).max(160),
+    attribution: z
+      .object({
+        provider: z.literal("unsplash"),
+        photographerName: z.string().min(1).max(80),
+        photographerUrl: z.string().url().max(500),
+        photoUrl: z.string().url().max(500),
+      })
+      .optional(),
   })
   .strict();
 
@@ -80,8 +88,22 @@ export const imageUsageSchema = z
   })
   .strict();
 
+export const subscriptionStatusSchema = z
+  .object({
+    usage: imageUsageSchema,
+    billingConfigured: z.boolean(),
+    actions: z
+      .object({
+        canCheckout: z.boolean(),
+        canManage: z.boolean(),
+      })
+      .strict(),
+  })
+  .strict();
+
 export type BedtimeRequest = z.infer<typeof bedtimeRequestSchema>;
 export type BedtimeResponse = z.infer<typeof bedtimeResponseSchema>;
 export type IllustrationRequest = z.infer<typeof illustrationRequestSchema>;
 export type IllustrationResponse = z.infer<typeof illustrationResponseSchema>;
 export type ImageUsage = z.infer<typeof imageUsageSchema>;
+export type SubscriptionStatus = z.infer<typeof subscriptionStatusSchema>;

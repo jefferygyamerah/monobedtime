@@ -11,6 +11,8 @@ import {
 
 let googleProvider: ReturnType<typeof createGoogleGenerativeAI> | null = null;
 
+const UNSPLASH_APP_NAME = "monobedtime";
+
 function getGoogle() {
   if (!googleProvider) {
     googleProvider = createGoogleGenerativeAI({
@@ -67,6 +69,137 @@ function buildFallback(
     imageDataUrl: null,
     fallback: true,
     note,
+  });
+}
+
+function buildUnsplashAttributionLinks(photoUrl: string, photographerUrl: string) {
+  const photo = new URL(photoUrl);
+  photo.searchParams.set("utm_source", UNSPLASH_APP_NAME);
+  photo.searchParams.set("utm_medium", "referral");
+
+  const profile = new URL(photographerUrl);
+  profile.searchParams.set("utm_source", UNSPLASH_APP_NAME);
+  profile.searchParams.set("utm_medium", "referral");
+
+  return {
+    photoUrl: photo.toString(),
+    photographerUrl: profile.toString(),
+  };
+}
+
+function toUnsplashImageUrl(rawUrl: string) {
+  const url = new URL(rawUrl);
+  url.searchParams.set("auto", "format");
+  url.searchParams.set("fit", "crop");
+  url.searchParams.set("crop", "entropy");
+  url.searchParams.set("w", "1600");
+  url.searchParams.set("h", "900");
+  url.searchParams.set("q", "80");
+  return url.toString();
+}
+
+function sceneQueryHint(sceneType: IllustrationRequest["sceneType"]) {
+  switch (sceneType) {
+    case "moon":
+      return "moonlight night sky";
+    case "clouds":
+      return "soft clouds night";
+    case "forest":
+      return "quiet forest night";
+    case "jungle":
+      return "gentle jungle night";
+    case "ocean":
+      return "calm ocean night";
+    case "mountains":
+      return "sleepy mountains night";
+    case "village":
+      return "warm village night";
+    case "city":
+      return "quiet city night";
+    default:
+      return "bedtime night";
+  }
+}
+
+function buildUnsplashQuery(input: IllustrationRequest) {
+  const base = `${sceneQueryHint(input.sceneType)} ${input.title} ${input.prompt}`
+    .replace(/[^\w\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Keep the query short and avoid names leaking into search.
+  return base.split(" ").slice(0, 14).join(" ").trim() || sceneQueryHint(input.sceneType);
+}
+
+async function tryUnsplash(input: IllustrationRequest): Promise<IllustrationResponse | null> {
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY?.trim();
+  if (!accessKey) {
+    return null;
+  }
+
+  const searchUrl = new URL("https://api.unsplash.com/search/photos");
+  searchUrl.searchParams.set("query", buildUnsplashQuery(input));
+  searchUrl.searchParams.set("orientation", "landscape");
+  searchUrl.searchParams.set("content_filter", "high");
+  searchUrl.searchParams.set("per_page", "10");
+
+  const response = await fetch(searchUrl, {
+    headers: {
+      Authorization: `Client-ID ${accessKey}`,
+      "Accept-Version": "v1",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = (await response.json()) as {
+    results?: Array<{
+      urls?: { raw?: string };
+      links?: { html?: string; download_location?: string };
+      user?: { name?: string; links?: { html?: string } };
+    }>;
+  };
+
+  const pick = payload.results?.find((result) => Boolean(result.urls?.raw && result.user?.name));
+  if (!pick?.urls?.raw || !pick.user?.name) {
+    return null;
+  }
+
+  // Unsplash API guideline: hit download_location when the photo is used.
+  if (pick.links?.download_location) {
+    fetch(`${pick.links.download_location}`, {
+      headers: {
+        Authorization: `Client-ID ${accessKey}`,
+        "Accept-Version": "v1",
+      },
+      cache: "no-store",
+    }).catch(() => undefined);
+  }
+
+  const photoUrlRaw = pick.links?.html ?? "https://unsplash.com";
+  const photographerUrlRaw = pick.user.links?.html ?? "https://unsplash.com";
+  const { photoUrl, photographerUrl } = buildUnsplashAttributionLinks(
+    photoUrlRaw,
+    photographerUrlRaw,
+  );
+
+  return illustrationResponseSchema.parse({
+    imageDataUrl: toUnsplashImageUrl(pick.urls.raw),
+    fallback: false,
+    note: localizedNote(
+      input,
+      "Photo selected from Unsplash.",
+      "Foto seleccionada de Unsplash.",
+    ),
+    attribution: {
+      provider: "unsplash",
+      photographerName: pick.user.name,
+      photographerUrl,
+      photoUrl,
+    },
   });
 }
 
@@ -184,11 +317,40 @@ async function tryImagen(input: IllustrationRequest) {
 }
 
 export async function generateIllustration(rawInput: unknown) {
+  return generateIllustrationWithOptions(rawInput, { preferUnsplash: false });
+}
+
+export async function generateIllustrationWithOptions(
+  rawInput: unknown,
+  options?: { preferUnsplash?: boolean },
+) {
   const input = illustrationRequestSchema.parse(rawInput);
+  const preferUnsplash = options?.preferUnsplash ?? false;
   const apiKey =
     process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
+  if (preferUnsplash) {
+    const unsplash = await tryUnsplash(input);
+    if (unsplash) {
+      return unsplash;
+    }
+
+    return buildFallback(
+      input,
+      localizedNote(
+        input,
+        "Unsplash is not configured on this deployment yet, so the app is showing the built-in illustration.",
+        "Unsplash todavia no esta configurado en este despliegue, asi que la app muestra la ilustracion integrada.",
+      ),
+    );
+  }
+
   if (!apiKey) {
+    const unsplash = await tryUnsplash(input);
+    if (unsplash) {
+      return unsplash;
+    }
+
     return buildFallback(
       input,
       localizedNote(
@@ -207,6 +369,11 @@ export async function generateIllustration(rawInput: unknown) {
     const note = quotaFallbackNote(geminiError, input);
 
     if (note) {
+      const unsplash = await tryUnsplash(input);
+      if (unsplash) {
+        return unsplash;
+      }
+
       return buildFallback(input, note);
     }
   }
@@ -222,6 +389,11 @@ export async function generateIllustration(rawInput: unknown) {
     const note = quotaFallbackNote(geminiPreviewError, input);
 
     if (note) {
+      const unsplash = await tryUnsplash(input);
+      if (unsplash) {
+        return unsplash;
+      }
+
       return buildFallback(input, note);
     }
   }
@@ -233,6 +405,11 @@ export async function generateIllustration(rawInput: unknown) {
       "Monobedtime illustration generation fell back after Gemini and Imagen failures:",
       imagenError,
     );
+
+    const unsplash = await tryUnsplash(input);
+    if (unsplash) {
+      return unsplash;
+    }
 
     return buildFallback(
       input,
