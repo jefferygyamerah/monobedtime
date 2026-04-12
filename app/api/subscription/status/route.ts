@@ -4,7 +4,11 @@ import {
   normalizeDayKey,
   normalizeSessionId,
 } from "@/server/image-access";
-import { getSubscriptionCookieName } from "@/server/subscription-access";
+import {
+  getSubscriptionCookieName,
+  isImageSubscriptionConfigured,
+} from "@/server/subscription-access";
+import type { SubscriptionStatus } from "@/lib/story-contract";
 
 export const runtime = "nodejs";
 
@@ -19,14 +23,20 @@ export async function GET(request: Request) {
       cookieStore.get(getSubscriptionCookieName())?.value ?? null,
   });
 
-  return Response.json(
-    {
-      usage,
+  const billingConfigured = isImageSubscriptionConfigured();
+
+  const body: SubscriptionStatus = {
+    usage,
+    billingConfigured,
+    actions: {
+      canCheckout: billingConfigured && !usage.subscribed,
+      canManage: usage.subscribed,
     },
-    {
-      headers: {
-        "Cache-Control": "no-store",
-      },
+  };
+
+  return Response.json(body, {
+    headers: {
+      "Cache-Control": "no-store",
     },
-  );
+  });
 }
