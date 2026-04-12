@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import {
   startTransition,
+  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
@@ -13,6 +14,7 @@ import type {
   BedtimeRequest,
   BedtimeResponse,
   IllustrationResponse,
+  SubscriptionStatus,
 } from "@/lib/story-contract";
 
 const initialForm: BedtimeRequest = {
@@ -60,10 +62,44 @@ const panelClass =
 const fieldClass =
   "w-full rounded-2xl border border-black/8 bg-white/72 px-4 py-3 text-black outline-none transition placeholder:text-black/35 focus:border-[#FF7A00] focus:bg-white";
 
+function getSessionId() {
+  if (typeof window === "undefined") return "guest-session";
+  try {
+    let id = sessionStorage.getItem("mb_session_id");
+    if (!id) {
+      id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      sessionStorage.setItem("mb_session_id", id);
+    }
+    return id;
+  } catch {
+    return "guest-session";
+  }
+}
+
+function getDayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function buildStatusHeaders() {
+  return {
+    "x-monobedtime-session-id": getSessionId(),
+    "x-monobedtime-day-key": getDayKey(),
+  };
+}
+
 export function StoryStudio() {
   const [form, setForm] = useState<BedtimeRequest>(initialForm);
   const [story, setStory] = useState<BedtimeResponse | null>(null);
   const [aiStatus, setAIStatus] = useState<AIStatus | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] =
+    useState<SubscriptionStatus | null>(null);
+  const [subscriptionStatusLoading, setSubscriptionStatusLoading] =
+    useState(true);
+  const [subscriptionStatusError, setSubscriptionStatusError] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasGeneratedStory, setHasGeneratedStory] = useState(false);
@@ -99,29 +135,44 @@ export function StoryStudio() {
 
   const keyStatusMessage = useMemo(() => {
     if (!aiStatus) {
-      return "Checking AI key configuration...";
+      return "Checking story generation…";
     }
-
-    const missing: string[] = [];
 
     if (!aiStatus.storyWriterConfigured) {
-      missing.push("DEEPSEEK_API_KEY");
+      return "Story generation is not available.";
     }
 
-    if (!aiStatus.storyReviewerConfigured) {
-      missing.push("GEMINI_API_KEY");
-    }
-
-    if (!aiStatus.subscriptionConfigured) {
-      missing.push("Stripe subscription keys");
-    }
-
-    if (missing.length === 0) {
-      return "All core keys are configured.";
-    }
-
-    return `Missing: ${missing.join(", ")}`;
+    return "Story generation is ready.";
   }, [aiStatus]);
+
+  // Derive illustration permission: default to allowing if status unknown
+  const canGenerateIllustrations =
+    subscriptionStatus?.usage.canGenerate ?? true;
+
+  // Derive billing state label for display
+  const illustrationStatusMessage = useMemo(() => {
+    if (subscriptionStatusLoading) {
+      return "Checking your illustration credits…";
+    }
+    if (subscriptionStatusError || !subscriptionStatus) {
+      return "Could not check illustration status. Your story still generates; illustration will try its best.";
+    }
+    const { usage, billingConfigured } = subscriptionStatus;
+    if (!billingConfigured) {
+      return "Illustration service coming soon — your full story still generates.";
+    }
+    if (usage.subscribed) {
+      return "Premium: unlimited story illustrations active.";
+    }
+    if (!usage.canGenerate) {
+      return `Today's ${usage.dailyLimit} free illustrations are used up. Your story is complete — illustration resumes tomorrow.`;
+    }
+    return `Free: ${usage.remainingFreeImages} of ${usage.dailyLimit} daily illustrations remaining.`;
+  }, [
+    subscriptionStatus,
+    subscriptionStatusLoading,
+    subscriptionStatusError,
+  ]);
 
   function updateField<K extends keyof BedtimeRequest>(
     key: K,
@@ -132,6 +183,26 @@ export function StoryStudio() {
       [key]: value,
     }));
   }
+
+  const fetchSubscriptionStatus = useCallback(async () => {
+    setSubscriptionStatusError(false);
+    try {
+      const response = await fetch("/api/subscription/status", {
+        cache: "no-store",
+        headers: buildStatusHeaders(),
+      });
+      if (response.ok) {
+        const data = (await response.json()) as SubscriptionStatus;
+        setSubscriptionStatus(data);
+      } else {
+        setSubscriptionStatusError(true);
+      }
+    } catch {
+      setSubscriptionStatusError(true);
+    } finally {
+      setSubscriptionStatusLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,6 +233,10 @@ export function StoryStudio() {
   }, []);
 
   useEffect(() => {
+    void fetchSubscriptionStatus();
+  }, [fetchSubscriptionStatus]);
+
+  useEffect(() => {
     let cancelled = false;
 
     if (!story || !form.premium || !hasGeneratedStory) {
@@ -176,6 +251,22 @@ export function StoryStudio() {
       return;
     }
 
+    // Block illustration requests when the free limit is known to be exhausted
+    if (!canGenerateIllustrations) {
+      const s = subscriptionStatus;
+      const billingConfigured = s?.billingConfigured ?? false;
+      const exhaustedNote = billingConfigured
+        ? `Today's ${s?.usage.dailyLimit ?? 3} free illustrations are used up. Your story is complete — illustration resumes tomorrow or with a subscription.`
+        : "Illustration credits are unavailable. Your story is complete and reads fully without images.";
+      setIllustrations({
+        cover: null,
+        blocks: {},
+        loading: false,
+        note: exhaustedNote,
+      });
+      return;
+    }
+
     const activeStory = story;
 
     async function fetchIllustrations() {
@@ -183,7 +274,7 @@ export function StoryStudio() {
         cover: null,
         blocks: {},
         loading: true,
-        note: "Preparing premium art with Gemini in the background...",
+        note: "Preparing story art in the background…",
       });
 
       const targets = [
@@ -210,6 +301,7 @@ export function StoryStudio() {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
+                ...buildStatusHeaders(),
               },
               body: JSON.stringify({
                 title: target.title,
@@ -222,7 +314,9 @@ export function StoryStudio() {
             const data = await response.json();
 
             if (!response.ok) {
-              throw new Error(data.error || "We could not create the illustration.");
+              throw new Error(
+                data.error || "We could not create the illustration.",
+              );
             }
 
             return {
@@ -242,7 +336,8 @@ export function StoryStudio() {
         return;
       }
 
-      const blockIllustrations: Record<number, IllustrationResponse | null> = {};
+      const blockIllustrations: Record<number, IllustrationResponse | null> =
+        {};
       let coverIllustration: IllustrationResponse | null = null;
       let successful = 0;
 
@@ -258,14 +353,17 @@ export function StoryStudio() {
         }
       }
 
+      // Refresh status after illustration run so the credit count stays current
+      void fetchSubscriptionStatus();
+
       setIllustrations({
         cover: coverIllustration,
         blocks: blockIllustrations,
         loading: false,
-      note:
+        note:
           successful > 0
-            ? "Premium illustrations are ready."
-            : "The built-in scene art is still carrying the experience beautifully while Gemini stays unavailable.",
+            ? null
+            : "The built-in scene art is carrying the experience while the illustration service is unavailable.",
       });
     }
 
@@ -274,7 +372,15 @@ export function StoryStudio() {
     return () => {
       cancelled = true;
     };
-  }, [form.language, form.premium, hasGeneratedStory, story]);
+  }, [
+    canGenerateIllustrations,
+    fetchSubscriptionStatus,
+    form.language,
+    form.premium,
+    hasGeneratedStory,
+    story,
+    subscriptionStatus,
+  ]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -306,14 +412,64 @@ export function StoryStudio() {
       startTransition(() => {
         setStory(data as BedtimeResponse);
       });
+
+      // Refresh subscription status after story generates so credit counts are fresh
+      void fetchSubscriptionStatus();
     } catch (caughtError) {
       setStory(null);
       setHasGeneratedStory(false);
       setError(
-        caughtError instanceof Error ? caughtError.message : "Something went wrong.",
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Something went wrong.",
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCheckout() {
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+    try {
+      const response = await fetch("/api/subscription/checkout", {
+        method: "POST",
+        headers: buildStatusHeaders(),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.url) {
+        throw new Error(data.error || "Checkout is unavailable right now.");
+      }
+      window.location.href = data.url as string;
+    } catch (err) {
+      setCheckoutError(
+        err instanceof Error ? err.message : "Checkout is unavailable right now.",
+      );
+      setCheckoutLoading(false);
+    }
+  }
+
+  async function handlePortal() {
+    setPortalLoading(true);
+    setPortalError(null);
+    try {
+      const response = await fetch("/api/subscription/portal", {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (!response.ok || !data.url) {
+        throw new Error(
+          data.error || "Could not open the subscription manager.",
+        );
+      }
+      window.location.href = data.url as string;
+    } catch (err) {
+      setPortalError(
+        err instanceof Error
+          ? err.message
+          : "Could not open the subscription manager.",
+      );
+      setPortalLoading(false);
     }
   }
 
@@ -330,6 +486,12 @@ export function StoryStudio() {
       note: "Add the story details first. The story and scene art appear only after generation.",
     });
   }
+
+  const showCheckoutCta =
+    subscriptionStatus?.actions.canCheckout &&
+    !subscriptionStatus.usage.subscribed;
+
+  const showPortalCta = subscriptionStatus?.actions.canManage;
 
   return (
     <div className="grid gap-10 lg:grid-cols-[1.02fr_0.98fr]">
@@ -352,8 +514,47 @@ export function StoryStudio() {
         </div>
 
         <div className="mb-5 rounded-2xl border border-black/8 bg-white/76 px-4 py-3 text-sm text-black/66 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
-          <p className="font-medium text-black">Story target: exactly 600 words in the story body.</p>
+          <p className="font-medium text-black">
+            Story target: exactly 600 words in the story body.
+          </p>
           <p className="mt-1">{keyStatusMessage}</p>
+          <p className="mt-1">{illustrationStatusMessage}</p>
+
+          {showCheckoutCta ? (
+            <div className="mt-3 flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={checkoutLoading}
+                onClick={() => void handleCheckout()}
+                className="inline-flex min-h-9 items-center justify-center rounded-full bg-[#FF7A00] px-5 text-sm font-semibold text-white transition hover:bg-[#e06a00] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {checkoutLoading
+                  ? "Starting checkout…"
+                  : "Unlock unlimited illustrations"}
+              </button>
+              {checkoutError ? (
+                <p className="text-xs text-red-600">{checkoutError}</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {showPortalCta ? (
+            <div className="mt-3 flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={portalLoading}
+                onClick={() => void handlePortal()}
+                className="inline-flex min-h-9 items-center justify-center rounded-full border border-black/10 bg-white/80 px-5 text-sm font-medium text-black/72 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {portalLoading
+                  ? "Opening subscription manager…"
+                  : "Manage subscription"}
+              </button>
+              {portalError ? (
+                <p className="text-xs text-red-600">{portalError}</p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
@@ -373,7 +574,9 @@ export function StoryStudio() {
               <span className="text-sm text-black/62">Age</span>
               <input
                 value={form.age}
-                onChange={(event) => updateField("age", Number(event.target.value))}
+                onChange={(event) =>
+                  updateField("age", Number(event.target.value))
+                }
                 className={fieldClass}
                 min={0}
                 max={12}
@@ -425,7 +628,9 @@ export function StoryStudio() {
             <span className="text-sm text-black/62">Cultural background</span>
             <input
               value={form.culturalBackground}
-              onChange={(event) => updateField("culturalBackground", event.target.value)}
+              onChange={(event) =>
+                updateField("culturalBackground", event.target.value)
+              }
               className={fieldClass}
               placeholder="Afrolatino, Dominicana, Andina, Mexicana..."
               required
@@ -459,9 +664,12 @@ export function StoryStudio() {
           <div className="rounded-[28px] border border-black/8 bg-white/74 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.04)]">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-black">More bedtime details</p>
+                <p className="text-sm font-medium text-black">
+                  More bedtime details
+                </p>
                 <p className="mt-1 text-sm text-black/56">
-                  These help the story feel more personal without making the setup heavy on mobile.
+                  These help the story feel more personal without making the
+                  setup heavy on mobile.
                 </p>
               </div>
               <button
@@ -473,7 +681,7 @@ export function StoryStudio() {
                     : "border border-black/10 bg-white/80 text-black/68"
                 }`}
               >
-                {form.premium ? "Premium on" : "Simple mode"}
+                {form.premium ? "Detailed mode" : "Simple mode"}
               </button>
             </div>
 
@@ -482,7 +690,9 @@ export function StoryStudio() {
                 <span className="text-sm text-black/62">Favorite animal</span>
                 <input
                   value={form.favoriteAnimal ?? ""}
-                  onChange={(event) => updateField("favoriteAnimal", event.target.value)}
+                  onChange={(event) =>
+                    updateField("favoriteAnimal", event.target.value)
+                  }
                   className={fieldClass}
                   placeholder="Monkey, rabbit, whale..."
                 />
@@ -492,7 +702,9 @@ export function StoryStudio() {
                 <span className="text-sm text-black/62">Favorite color</span>
                 <input
                   value={form.favoriteColor ?? ""}
-                  onChange={(event) => updateField("favoriteColor", event.target.value)}
+                  onChange={(event) =>
+                    updateField("favoriteColor", event.target.value)
+                  }
                   className={fieldClass}
                   placeholder="Orange"
                 />
@@ -502,7 +714,9 @@ export function StoryStudio() {
                 <span className="text-sm text-black/62">Value or lesson</span>
                 <input
                   value={form.moralLesson ?? ""}
-                  onChange={(event) => updateField("moralLesson", event.target.value)}
+                  onChange={(event) =>
+                    updateField("moralLesson", event.target.value)
+                  }
                   className={fieldClass}
                   placeholder="Kindness, patience..."
                 />
@@ -516,10 +730,14 @@ export function StoryStudio() {
               disabled={loading}
               className="inline-flex min-h-14 items-center justify-center rounded-full bg-black px-6 text-base font-semibold text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Writing your 10-minute story..." : "Create 10-minute story"}
+              {loading
+                ? "Writing your 10-minute story..."
+                : "Create 10-minute story"}
             </button>
             <p className="text-sm text-black/52">
-              Mono stays at the center. The story writes first, the art tries to follow, and the built-in scenes stay ready if live services fail.
+              The story writes first. Scene art follows when illustration
+              credits are available. Built-in scenes stay ready if the art
+              service is unavailable.
             </p>
           </div>
 
@@ -554,13 +772,16 @@ export function StoryStudio() {
                 story canvas
               </div>
               <h3 className="mt-3 text-3xl font-semibold text-black">
-                {deferredName || "Your little one"} gets a coherent and gentle bedtime story with Mono.
+                {deferredName || "Your little one"} gets a coherent and gentle
+                bedtime story with Mono.
               </h3>
             </div>
           </div>
 
           <p className="mt-4 max-w-xl text-base leading-7 text-black/62">
-            This area stays blank until you generate a story. DeepSeek writes first, Gemini reviews coherence and engagement, then scene art is generated.
+            This area stays blank until you generate a story. The story writes
+            first, then scene art is added where illustration credits are
+            available.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -568,7 +789,8 @@ export function StoryStudio() {
               Target length: exactly 600 words across story pages.
             </div>
             <div className="rounded-2xl border border-black/8 bg-white/74 px-4 py-4 text-sm text-black/66 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-              Companion system: Mono leads the story, Luffy cues interaction quietly.
+              Companion system: Mono leads the story, Luffy cues interaction
+              quietly.
             </div>
           </div>
         </div>
@@ -639,9 +861,12 @@ export function StoryStudio() {
                       <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#FF7A00]">
                         tonight&apos;s guide
                       </div>
-                      <h4 className="mt-2 text-xl font-semibold text-black">Mono</h4>
+                      <h4 className="mt-2 text-xl font-semibold text-black">
+                        Mono
+                      </h4>
                       <p className="mt-2 text-sm leading-6 text-black/62">
-                        Mono is the calm monkey companion who makes every Monobedtime story feel like part of the same world.
+                        Mono is the calm monkey companion who makes every
+                        Monobedtime story feel like part of the same world.
                       </p>
                     </div>
                   </div>
@@ -683,7 +908,7 @@ export function StoryStudio() {
               </p>
               {illustrations.loading ? (
                 <p className="mt-3 text-sm text-black/50">
-                  Gemini is still working in the background on the cover and first scenes.
+                  Scene art is still being prepared in the background.
                 </p>
               ) : null}
             </div>
@@ -694,7 +919,8 @@ export function StoryStudio() {
               blank canvas
             </p>
             <p className="mt-4 text-lg leading-8">
-              Your generated story appears here after you submit the form. Target output: 10 minutes and exactly 600 story words.
+              Your generated story appears here after you submit the form.
+              Target output: 10 minutes and exactly 600 story words.
             </p>
           </div>
         )}
@@ -702,4 +928,3 @@ export function StoryStudio() {
     </div>
   );
 }
-
