@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Monobedtime
 
-## Getting Started
+Personalized bedtime stories for children, with optional scene illustrations.
 
-First, run the development server:
+## What it does
+
+- Generates a fully personalized ~600-word, 10-minute bedtime story based on the child's name, age, language, cultural background, mood, and interests.
+- Adds scene illustrations when illustration credits are available.
+- Free plan: 3 illustrated stories per day per browser session.
+- Premium subscription: unlimited illustrations, powered by Stripe.
+
+## Premium illustration flow
+
+1. Free users get 3 illustration credits per day (tracked per browser session).
+2. When free credits are exhausted, the story still generates completely — only the scene art is paused.
+3. Subscribers get unlimited illustrations. The subscription is stored as a signed cookie on the current browser.
+4. After subscribing, the success page at `/subscribe/success` activates the cookie and unlocks unlimited art on that browser.
+
+## Running locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Purpose |
+|---|---|
+| `DEEPSEEK_API_KEY` | Story generation |
+| `GEMINI_API_KEY` | Story review and scene illustration |
+| `STRIPE_SECRET_KEY` | Subscription checkout and portal |
+| `STRIPE_IMAGE_SUBSCRIPTION_PRICE_ID` | The Stripe price ID for the illustration subscription |
+| `NEXT_PUBLIC_APP_URL` | Full URL of the app (used for Stripe redirect URLs) |
+| `COOKIE_SIGNING_SECRET` | Optional. Signs the subscription cookie. Defaults to the Stripe key if omitted. |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Illustration and subscription features degrade gracefully when their keys are missing — story generation still works.
