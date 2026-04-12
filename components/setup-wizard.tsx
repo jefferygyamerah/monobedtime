@@ -87,9 +87,9 @@ export function SetupWizard({
   }
 
   const slideVariants = {
-    enter: { x: 36, opacity: 0, filter: "blur(5px)" },
-    center: { x: 0, opacity: 1 },
-    exit: { x: -36, opacity: 0, filter: "blur(5px)" },
+    enter: { x: 36, opacity: 0, filter: "blur(10px)" },
+    center: { x: 0, opacity: 1, filter: "blur(0px)" },
+    exit: { x: -36, opacity: 0, filter: "blur(10px)" },
   };
 
   return (
@@ -101,15 +101,12 @@ export function SetupWizard({
       <div className="safe-top safe-bottom-lg safe-left safe-right relative z-10 mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-4 py-5 sm:px-6 sm:py-8">
         <div className="overflow-hidden rounded-[2rem] border border-white/16 bg-[#101a33]/88 px-5 py-6 shadow-[0_28px_90px_rgba(4,8,24,0.52)] backdrop-blur-md sm:px-6 sm:py-7">
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="space-y-3">
               <p className="text-[0.7rem] font-semibold uppercase tracking-[0.34em] text-indigo-200/80">
                 bedtime setup
               </p>
-              <h1 className="mt-3 text-3xl font-semibold leading-tight text-white sm:text-[2.15rem]">
-                Set the mood for the first story.
-              </h1>
-              <p className="mt-3 max-w-[28ch] text-sm leading-6 text-white/82 sm:text-[0.95rem]">
-                A few quiet details help Mono make the experience feel personal, cozy, and easy to begin.
+              <p className="max-w-[24ch] text-sm leading-6 text-white/80 sm:text-[0.95rem]">
+                Three quick details help Mono make the first story feel personal right away.
               </p>
             </div>
             <div className="shrink-0 rounded-full border border-white/18 bg-slate-950/45 px-3 py-2 text-right">
@@ -122,156 +119,160 @@ export function SetupWizard({
             </div>
           </div>
 
-          <div className="mt-6 flex gap-2">
-            {[1, 2, 3].map((index) => (
-              <div
-                key={index}
-                className={`h-1.5 rounded-full transition-all duration-500 ${
-                  step >= index ? "w-10 bg-indigo-200" : "w-3 bg-white/15"
-                }`}
-              />
-            ))}
-          </div>
+          <div className="mt-6 rounded-[1.7rem] border border-white/14 bg-slate-950/38 px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:px-5 sm:py-6">
+            <div className="flex items-center gap-2">
+              {[1, 2, 3].map((index) => (
+                <div
+                  key={index}
+                  className={`h-2 rounded-full transition-all duration-500 ${
+                    step >= index
+                      ? "w-12 bg-indigo-200 shadow-[0_0_18px_rgba(191,219,254,0.24)]"
+                      : "w-4 bg-white/24"
+                  }`}
+                />
+              ))}
+            </div>
 
-          <div className="mt-6 min-h-[260px] sm:min-h-[272px]">
-            <AnimatePresence mode="wait">
-              {step === 1 ? (
-                <motion.div
-                  key="step1"
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.38 }}
-                  className="space-y-5 sm:space-y-6"
-                >
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-200/70">
-                      {activeStep.eyebrow}
-                    </p>
-                    <h2 className="text-[1.95rem] font-light leading-tight text-white sm:text-[2.1rem]">
-                      {activeStep.title}
-                    </h2>
-                    <p className="max-w-[26ch] text-sm leading-6 text-white/78">
-                      {activeStep.description}
-                    </p>
-                  </div>
+            <div className="mt-5 min-h-[248px] sm:min-h-[260px]">
+              <AnimatePresence mode="wait">
+                {step === 1 ? (
+                  <motion.div
+                    key="step1"
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.38 }}
+                    className="space-y-5 sm:space-y-6"
+                  >
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-200/70">
+                        {activeStep.eyebrow}
+                      </p>
+                      <h2 className="text-[1.85rem] font-light leading-tight text-white sm:text-[2rem]">
+                        {activeStep.title}
+                      </h2>
+                      <p className="max-w-[26ch] text-sm leading-6 text-white/78">
+                        {activeStep.description}
+                      </p>
+                    </div>
 
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-white/92" htmlFor="child-name">
-                      Child name
-                    </label>
-                    <input
-                      id="child-name"
-                      type="text"
-                      autoFocus
-                      value={formData.childName}
-                      onChange={(event) => updateForm("childName", event.target.value)}
-                      placeholder="For example, Luna"
-                      className="w-full rounded-2xl border border-white/20 bg-slate-950/78 px-4 py-4 text-[1.4rem] text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition focus:border-indigo-200/70 focus:bg-slate-950/90 focus:ring-2 focus:ring-indigo-300/18"
-                    />
-                    <p className="text-xs leading-5 text-white/64">{activeStep.helper}</p>
-                  </div>
-                </motion.div>
-              ) : null}
-
-              {step === 2 ? (
-                <motion.div
-                  key="step2"
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.38 }}
-                  className="space-y-5 sm:space-y-6"
-                >
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-200/70">
-                      {activeStep.eyebrow}
-                    </p>
-                    <h2 className="text-[1.75rem] font-light leading-tight text-white sm:text-[1.95rem]">
-                      {activeStep.title}
-                    </h2>
-                    <p className="max-w-[28ch] text-sm leading-6 text-white/78">
-                      {activeStep.description}
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-3">
-                      <label className="text-sm font-medium text-white/92" htmlFor="child-age">
-                        Age
+                      <label className="text-sm font-medium text-white/92" htmlFor="child-name">
+                        Child name
                       </label>
                       <input
-                        id="child-age"
+                        id="child-name"
                         type="text"
                         autoFocus
-                        value={formData.age}
-                        onChange={(event) => updateForm("age", event.target.value)}
-                        placeholder="2 months old"
-                        className="w-full rounded-2xl border border-white/20 bg-slate-950/78 px-4 py-4 text-lg text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition focus:border-indigo-200/70 focus:bg-slate-950/90 focus:ring-2 focus:ring-indigo-300/18"
+                        value={formData.childName}
+                        onChange={(event) => updateForm("childName", event.target.value)}
+                        placeholder="For example, Luna"
+                        className="w-full rounded-2xl border border-white/20 bg-slate-950/78 px-4 py-4 text-[1.4rem] text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition focus:border-indigo-200/70 focus:bg-slate-950/90 focus:ring-2 focus:ring-indigo-300/18"
                       />
+                      <p className="text-xs leading-5 text-white/64">{activeStep.helper}</p>
+                    </div>
+                  </motion.div>
+                ) : null}
+
+                {step === 2 ? (
+                  <motion.div
+                    key="step2"
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.38 }}
+                    className="space-y-5 sm:space-y-6"
+                  >
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-200/70">
+                        {activeStep.eyebrow}
+                      </p>
+                      <h2 className="text-[1.7rem] font-light leading-tight text-white sm:text-[1.9rem]">
+                        {activeStep.title}
+                      </h2>
+                      <p className="max-w-[28ch] text-sm leading-6 text-white/78">
+                        {activeStep.description}
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-3">
+                        <label className="text-sm font-medium text-white/92" htmlFor="child-age">
+                          Age
+                        </label>
+                        <input
+                          id="child-age"
+                          type="text"
+                          autoFocus
+                          value={formData.age}
+                          onChange={(event) => updateForm("age", event.target.value)}
+                          placeholder="2 months old"
+                          className="w-full rounded-2xl border border-white/20 bg-slate-950/78 px-4 py-4 text-lg text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition focus:border-indigo-200/70 focus:bg-slate-950/90 focus:ring-2 focus:ring-indigo-300/18"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-sm font-medium text-white/92" htmlFor="language">
+                          Language
+                        </label>
+                        <input
+                          id="language"
+                          type="text"
+                          value={formData.language}
+                          onChange={(event) => updateForm("language", event.target.value)}
+                          placeholder="Spanish and English"
+                          className="w-full rounded-2xl border border-white/20 bg-slate-950/78 px-4 py-4 text-lg text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition focus:border-indigo-200/70 focus:bg-slate-950/90 focus:ring-2 focus:ring-indigo-300/18"
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-xs leading-5 text-white/64">{activeStep.helper}</p>
+                  </motion.div>
+                ) : null}
+
+                {step === 3 ? (
+                  <motion.div
+                    key="step3"
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.38 }}
+                    className="space-y-5 sm:space-y-6"
+                  >
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-200/70">
+                        {activeStep.eyebrow}
+                      </p>
+                      <h2 className="text-[1.65rem] font-light leading-tight text-white sm:text-[1.85rem]">
+                        {activeStep.title}
+                      </h2>
+                      <p className="max-w-[29ch] text-sm leading-6 text-white/78">
+                        {activeStep.description}
+                      </p>
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-sm font-medium text-white/92" htmlFor="language">
-                        Language
+                      <label className="text-sm font-medium text-white/92" htmlFor="culture">
+                        Family roots or places
                       </label>
                       <input
-                        id="language"
+                        id="culture"
                         type="text"
-                        value={formData.language}
-                        onChange={(event) => updateForm("language", event.target.value)}
-                        placeholder="Spanish and English"
+                        autoFocus
+                        value={formData.culture}
+                        onChange={(event) => updateForm("culture", event.target.value)}
+                        placeholder="Optional: Panama City, Colombian heritage"
                         className="w-full rounded-2xl border border-white/20 bg-slate-950/78 px-4 py-4 text-lg text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition focus:border-indigo-200/70 focus:bg-slate-950/90 focus:ring-2 focus:ring-indigo-300/18"
                       />
+                      <p className="text-xs leading-5 text-white/64">{activeStep.helper}</p>
                     </div>
-                  </div>
-
-                  <p className="text-xs leading-5 text-white/64">{activeStep.helper}</p>
-                </motion.div>
-              ) : null}
-
-              {step === 3 ? (
-                <motion.div
-                  key="step3"
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.38 }}
-                  className="space-y-5 sm:space-y-6"
-                >
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-200/70">
-                      {activeStep.eyebrow}
-                    </p>
-                    <h2 className="text-[1.7rem] font-light leading-tight text-white sm:text-[1.9rem]">
-                      {activeStep.title}
-                    </h2>
-                    <p className="max-w-[29ch] text-sm leading-6 text-white/78">
-                      {activeStep.description}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-white/92" htmlFor="culture">
-                      Family roots or places
-                    </label>
-                    <input
-                      id="culture"
-                      type="text"
-                      autoFocus
-                      value={formData.culture}
-                      onChange={(event) => updateForm("culture", event.target.value)}
-                      placeholder="Optional: Panama City, Colombian heritage"
-                      className="w-full rounded-2xl border border-white/20 bg-slate-950/78 px-4 py-4 text-lg text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition focus:border-indigo-200/70 focus:bg-slate-950/90 focus:ring-2 focus:ring-indigo-300/18"
-                    />
-                    <p className="text-xs leading-5 text-white/64">{activeStep.helper}</p>
-                  </div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </div>
           </div>
 
           <motion.button
