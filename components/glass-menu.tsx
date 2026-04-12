@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Flame,
   MoonStar,
-  SlidersVertical,
   Sparkles,
   Trees,
   Volume2,
@@ -15,6 +14,13 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Soundscape } from "@/components/use-bedtime-audio";
+
+const soundscapeLabel: Record<Soundscape, string> = {
+  forest: "Forest",
+  sea: "Sea",
+  city: "City",
+  fire: "Fire",
+};
 
 function IconButton({
   ariaLabel,
@@ -143,9 +149,17 @@ export function GlassMenu({
           <div className="hidden rounded-full border border-white/12 bg-white/8 px-3 py-2 text-[11px] uppercase tracking-[0.24em] text-[#cad6ff]/80 sm:block">
             Page {currentPage + 1} / {totalPages}
           </div>
-          <IconButton ariaLabel="Open audio ambiance drawer" onClick={onAudioToggle}>
-            <SlidersVertical className="h-5 w-5" />
-          </IconButton>
+          <button
+            type="button"
+            aria-label="Open soundscape drawer"
+            onClick={onAudioToggle}
+            className="glass-button inline-flex h-12 items-center gap-2 rounded-full px-4 text-[#f4ead7] transition"
+          >
+            <Volume2 className="h-5 w-5" />
+            <span className="text-[11px] uppercase tracking-[0.2em]">
+              {activeSoundscape ? `${soundscapeLabel[activeSoundscape]} on` : "Sound"}
+            </span>
+          </button>
         </div>
       </motion.div>
 
@@ -176,7 +190,7 @@ export function GlassMenu({
       >
         <div className="glass-panel inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[11px] uppercase tracking-[0.22em] text-[#f7ebcf]/80">
           <Sparkles className="h-4 w-4" />
-          tap edges, swipe, or use arrow keys
+          swipe pages or tap sound
         </div>
       </motion.div>
 

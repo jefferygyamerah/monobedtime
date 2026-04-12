@@ -2,11 +2,15 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Flame, LoaderCircle, Moon, Sparkles, Wind } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MonkeyMark } from "@/components/monkey-mark";
 import { PoodleCompanion } from "@/components/poodle-companion";
+import { ScenePoster } from "@/components/scene-poster";
+import { SoundDock } from "@/components/sound-dock";
 import { SetupWizard, type SetupProfile } from "@/components/setup-wizard";
 import { StoryBookReader } from "@/components/story-book-reader";
+import { useBedtimeAudio } from "@/components/use-bedtime-audio";
 import type {
   BedtimeRequest,
   BedtimeResponse,
@@ -34,6 +38,12 @@ type ArtState = {
 
 type OnboardingState = "checking" | "needsSetup" | "ready";
 type StatusLoadState = "loading" | "ready" | "error";
+
+const promptStarters = [
+  "A moonlit nursery where Luffy keeps watch by the window.",
+  "A sleepy boat ride across a silver sea with gentle stars overhead.",
+  "A tiny forest lantern walk that ends with everyone safely tucked in.",
+] as const;
 
 function describeServiceStatus(aiStatus: AIStatus | null) {
   if (!aiStatus) {
@@ -256,6 +266,30 @@ function deriveLocation(culture: string) {
   return segments[0] ?? "home";
 }
 
+function previewSceneTypeForMood(mood: Mood) {
+  if (mood === "warm") {
+    return "village" as const;
+  }
+
+  if (mood === "adventure") {
+    return "forest" as const;
+  }
+
+  return "clouds" as const;
+}
+
+function previewCaptionForMood(mood: Mood, culture: string) {
+  if (mood === "warm") {
+    return `Soft window light, favorite blankets, and a bedtime world that feels close to ${culture || "home"}.`;
+  }
+
+  if (mood === "adventure") {
+    return `A brave little nighttime journey with just enough wonder to feel magical and still land softly.`;
+  }
+
+  return `Moonlight, slow breathing, and a gentle rhythm that settles the room without rushing bedtime.`;
+}
+
 export function NightlyScreen() {
   const [onboarding, setOnboarding] = useState<OnboardingState>("checking");
   const [profile, setProfile] = useState<SetupProfile | null>(null);
@@ -278,6 +312,7 @@ export function NightlyScreen() {
     note: null,
   });
   const [cueKey, setCueKey] = useState(0);
+  const { activeSoundscape, selectSoundscape } = useBedtimeAudio();
   const sessionIdRef = useRef("guest-session");
   const dayKeyRef = useRef(createLocalDayKey());
 
@@ -289,6 +324,11 @@ export function NightlyScreen() {
     subscriptionStatus,
     statusState,
   );
+  const previewSceneType = previewSceneTypeForMood(mood);
+  const previewTitle = prompt.trim()
+    ? prompt.trim()
+    : `${profile?.childName || "Tonight"} and the hush before sleep`;
+  const previewCaption = previewCaptionForMood(mood, profile?.culture?.trim() || "");
 
   const requestHeaders = useCallback(() => {
     return {
@@ -720,7 +760,13 @@ export function NightlyScreen() {
   }
 
   if (onboarding === "needsSetup") {
-    return <SetupWizard onComplete={handleSetupComplete} />;
+    return (
+      <SetupWizard
+        activeSoundscape={activeSoundscape}
+        onComplete={handleSetupComplete}
+        onSelectSoundscape={selectSoundscape}
+      />
+    );
   }
 
   if (story) {
@@ -762,6 +808,8 @@ export function NightlyScreen() {
               }
             : undefined
         }
+        activeSoundscape={activeSoundscape}
+        onSelectSoundscape={selectSoundscape}
       />
     );
   }
@@ -815,161 +863,267 @@ export function NightlyScreen() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, filter: "blur(10px)", scale: 0.95 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="mx-auto flex w-full max-w-md flex-col gap-6 rounded-[2rem] border border-white/24 bg-[#101a33]/82 px-5 py-6 shadow-[0_28px_90px_rgba(7,10,26,0.48)] backdrop-blur-md sm:gap-8 sm:px-6 sm:py-8"
+            className="grid gap-6 lg:grid-cols-[1.12fr_0.88fr]"
           >
-            <div className="space-y-2 text-center">
-              <div className="mb-3 flex justify-center">
-                <MonkeyMark className="rounded-[24px] border-white/20 bg-white/30 p-2.5" />
-              </div>
-                <h1 className="text-[2rem] font-light tracking-wide text-white sm:text-3xl">
-                  Good evening, {profile?.childName || "Little One"}.
-                </h1>
-              <p className="text-sm text-white/90">
-                Start from a blank canvas and generate a full 10-minute story.
-              </p>
-            </div>
+            <div className="flex flex-col gap-6">
+              <section className="relative overflow-hidden rounded-[2.3rem] border border-white/20 bg-[#101a33]/86 p-5 shadow-[0_30px_110px_rgba(7,10,26,0.48)] backdrop-blur-md sm:p-6">
+                <div className="absolute right-4 top-4 hidden overflow-hidden rounded-[1.6rem] border border-white/18 bg-white/10 shadow-[0_20px_40px_rgba(7,10,26,0.28)] sm:block">
+                  <Image
+                    src="/luffy.png"
+                    alt="Luffy, the bedtime companion"
+                    width={120}
+                    height={144}
+                    className="h-[144px] w-[120px] object-cover"
+                    priority
+                  />
+                </div>
 
-            <div className="rounded-xl border border-white/22 bg-slate-950/46 px-4 py-3 text-xs text-white/95">
-              <p>Profile: {profile?.age || "0 years"}, {profileLanguageLabel}</p>
-              <p className="mt-1">Roots: {profile?.culture || "family bedtime traditions"}</p>
-              <button
-                type="button"
-                onClick={restartSetup}
-                className="mt-3 inline-flex rounded-full border border-white/28 bg-slate-950/50 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white transition hover:bg-slate-950/68"
-              >
-                Edit profile
-              </button>
-            </div>
+                <div className="max-w-[32rem]">
+                  <div className="mb-4 flex items-center gap-3">
+                    <MonkeyMark className="rounded-[24px] border-white/20 bg-white/22 p-2.5" />
+                    <div className="rounded-full border border-white/16 bg-white/8 px-3 py-2 text-[11px] uppercase tracking-[0.22em] text-white/76">
+                      Night story studio
+                    </div>
+                  </div>
 
-            <div className="flex justify-between gap-2 sm:gap-3">
-              {[
-                { id: "calm", icon: Wind, label: "Calm" },
-                { id: "warm", icon: Flame, label: "Warm" },
-                { id: "adventure", icon: Moon, label: "Adventure" },
-              ].map((item) => (
+                  <h1 className="max-w-[12ch] text-balance text-[2.4rem] font-light leading-[0.98] text-white sm:text-[3.2rem]">
+                    Good evening, {profile?.childName || "little one"}.
+                  </h1>
+                  <p className="mt-4 max-w-[30rem] text-base leading-7 text-white/78">
+                    Shape tonight&apos;s story with a mood, a spark of an idea, and one room tone.
+                    We&apos;ll do the rest.
+                  </p>
+                </div>
+
+                <div className="mt-6 overflow-hidden rounded-[2rem] border border-white/14 bg-slate-950/30 p-2">
+                  <ScenePoster
+                    title={previewTitle}
+                    caption={previewCaption}
+                    sceneType={previewSceneType}
+                  />
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs uppercase tracking-[0.18em] text-white/92">
+                      Story seed
+                    </span>
+                    <span className="rounded-full border border-white/16 bg-white/8 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-white/78">
+                      Detailed mode
+                    </span>
+                  </div>
+                  <textarea
+                    rows={5}
+                    value={prompt}
+                    onChange={(event) => setPrompt(event.target.value)}
+                    placeholder="Share the bedtime idea. Example: Mono helps the nursery settle while little Luffy watches the moon through the window."
+                    className="min-h-[160px] w-full resize-none rounded-[1.8rem] border border-white/20 bg-slate-950/78 px-5 py-5 text-base leading-7 text-white placeholder:text-white/42 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all focus:border-indigo-100/80 focus:bg-slate-950/90 focus:outline-none"
+                    aria-label="Story prompt input"
+                  />
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {promptStarters.map((starter) => (
+                    <button
+                      key={starter}
+                      type="button"
+                      onClick={() => setPrompt(starter)}
+                      className="rounded-full border border-white/16 bg-white/8 px-4 py-2 text-sm text-white/84 transition hover:bg-white/12"
+                    >
+                      {starter}
+                    </button>
+                  ))}
+                </div>
+
                 <button
-                  key={item.id}
                   type="button"
-                  onClick={() => setMood(item.id as Mood)}
-                  className={`flex min-w-0 flex-1 flex-col items-center gap-2 rounded-2xl border px-2 py-3 transition-all duration-300 ease-out sm:py-4 ${
-                    mood === item.id
-                      ? "border-white/45 bg-white/18 text-white shadow-[0_0_20px_rgba(255,255,255,0.09)]"
-                      : "border-white/22 bg-slate-950/42 text-white/90 hover:bg-slate-950/58 hover:text-white"
-                  }`}
-                  aria-label={`Set mood to ${item.label}`}
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                  className="group mt-6 flex w-full items-center justify-center gap-3 rounded-[1.7rem] border border-[#c9d3ff]/34 bg-[linear-gradient(135deg,rgba(191,219,254,0.24),rgba(129,140,248,0.34),rgba(251,191,36,0.18))] px-6 py-5 text-white transition hover:border-[#dce6ff]/48 hover:shadow-[0_18px_50px_rgba(129,140,248,0.24)] disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  <item.icon size={24} strokeWidth={1.5} />
-                  <span className="text-[11px] font-medium uppercase tracking-[0.16em] sm:text-xs sm:tracking-wider">
-                    {item.label}
+                  {isGenerating ? (
+                    <LoaderCircle size={18} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={18} className="opacity-70 transition-opacity group-hover:opacity-100" />
+                  )}
+                  <span className="text-base font-medium tracking-wide">
+                    {isGenerating ? "Waking up the stars..." : "Generate tonight's story"}
                   </span>
                 </button>
-              ))}
+
+                <div className="mt-6">
+                  <SoundDock
+                    activeSoundscape={activeSoundscape}
+                    onSelectSoundscape={selectSoundscape}
+                  />
+                </div>
+              </section>
             </div>
 
-            <label className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs uppercase tracking-[0.18em] text-white/95">
-                  Story seed
-                </span>
-                <span className="rounded-full border border-white/18 bg-slate-950/48 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-white/82">
-                  Detailed mode
-                </span>
-              </div>
-              <textarea
-                rows={4}
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
-                placeholder="Share the bedtime idea. Example: Mono helps the nursery settle while little Luffy watches the moon through the window."
-                className="min-h-[132px] w-full resize-none rounded-2xl border border-white/22 bg-slate-950/76 px-4 py-4 text-sm leading-6 text-white placeholder:text-white/46 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all focus:border-indigo-100/80 focus:bg-slate-950/88 focus:outline-none sm:px-5"
-                aria-label="Story prompt input"
-              />
-            </label>
-
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className="group mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-200/55 bg-indigo-300/28 py-5 text-white transition-all hover:border-indigo-100 hover:bg-indigo-300/36 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isGenerating ? (
-                <LoaderCircle size={18} className="animate-spin" />
-              ) : (
-                <Sparkles size={18} className="opacity-50 transition-opacity group-hover:opacity-100" />
-              )}
-              <span className="font-medium tracking-wide">
-                {isGenerating ? "Waking up the stars..." : "Generate tonight's story"}
-              </span>
-            </button>
-
-            <div
-              className={`rounded-[1.4rem] border px-4 py-4 text-white shadow-[0_18px_40px_rgba(7,10,26,0.22)] backdrop-blur-xl ${illustrationPanelClass}`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2">
-                  <div
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.18em] ${illustrationBadgeClass}`}
-                  >
-                    {illustrationStatus.badge}
+            <div className="flex flex-col gap-6">
+              <section className="rounded-[2.1rem] border border-white/20 bg-[#101a33]/84 p-5 shadow-[0_28px_90px_rgba(7,10,26,0.42)] backdrop-blur-md sm:p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-[11px] uppercase tracking-[0.24em] text-white/64">
+                      Tonight&apos;s profile
+                    </div>
+                    <h2 className="mt-3 text-2xl font-light text-white">
+                      Built for {profile?.childName || "your little one"}
+                    </h2>
                   </div>
-                  <p className="text-sm font-medium text-white">{illustrationStatus.title}</p>
-                  <p className="text-sm leading-6 text-white/78">{illustrationStatus.detail}</p>
-                </div>
-                <div className="rounded-full border border-white/18 bg-slate-950/45 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-white/82">
-                  {usage?.subscribed
-                    ? "Unlimited"
-                    : usage
-                      ? `${usage.remainingFreeImages}/${usage.dailyLimit}`
-                      : "..."}
-                </div>
-              </div>
-
-              {subscriptionStatus?.actions.canManage ? (
-                <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      void openSubscriptionPortal();
-                    }}
-                    disabled={billingPending}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/24 bg-slate-950/54 px-4 py-2.5 text-sm text-white transition hover:bg-slate-950/68 disabled:opacity-50"
+                    onClick={restartSetup}
+                    className="inline-flex rounded-full border border-white/18 bg-white/8 px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-white transition hover:bg-white/12"
                   >
-                    <Sparkles className="h-4 w-4" />
-                    {billingPending ? "Opening..." : "Manage subscription"}
+                    Edit profile
                   </button>
                 </div>
-              ) : null}
 
-              {subscriptionStatus?.actions.canCheckout && usage && !usage.canGenerate ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void startSubscriptionCheckout();
-                    }}
-                    disabled={billingPending}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#ffd59c]/30 bg-[#ffd59c]/18 px-4 py-2.5 text-sm text-[#fff4e1] transition hover:bg-[#ffd59c]/24 disabled:opacity-50"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    {billingPending ? "Opening..." : "Start paid subscription"}
-                  </button>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[1.5rem] border border-white/14 bg-slate-950/38 px-4 py-4 text-sm text-white/82">
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-white/54">
+                      Age + language
+                    </div>
+                    <div className="mt-2 text-base text-white">
+                      {profile?.age || "0 years"}, {profileLanguageLabel}
+                    </div>
+                  </div>
+                  <div className="rounded-[1.5rem] border border-white/14 bg-slate-950/38 px-4 py-4 text-sm text-white/82">
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-white/54">
+                      Roots
+                    </div>
+                    <div className="mt-2 text-base text-white">
+                      {profile?.culture || "family bedtime traditions"}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-[2.1rem] border border-white/20 bg-[#101a33]/84 p-5 shadow-[0_28px_90px_rgba(7,10,26,0.42)] backdrop-blur-md sm:p-6">
+                <div className="text-[11px] uppercase tracking-[0.24em] text-white/64">
+                  Choose the atmosphere
+                </div>
+                <div className="mt-4 grid gap-3">
+                  {[
+                    {
+                      id: "calm",
+                      icon: Wind,
+                      label: "Calm",
+                      detail: "Clouds, quiet breathing, and slower page turns.",
+                    },
+                    {
+                      id: "warm",
+                      icon: Flame,
+                      label: "Warm",
+                      detail: "Window glow, closeness, and a room that feels safe.",
+                    },
+                    {
+                      id: "adventure",
+                      icon: Moon,
+                      label: "Adventure",
+                      detail: "A tiny brave journey with a very soft landing.",
+                    },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setMood(item.id as Mood)}
+                      className={`rounded-[1.6rem] border px-4 py-4 text-left transition-all duration-300 ${
+                        mood === item.id
+                          ? "border-[#d6ddff]/34 bg-[linear-gradient(135deg,rgba(191,219,254,0.16),rgba(129,140,248,0.2),rgba(255,214,153,0.14))] text-white shadow-[0_12px_34px_rgba(129,140,248,0.16)]"
+                          : "border-white/14 bg-slate-950/34 text-white/88 hover:bg-slate-950/48"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/16 bg-white/8">
+                          <item.icon size={20} strokeWidth={1.6} />
+                        </div>
+                        <div>
+                          <div className="text-base font-medium">{item.label}</div>
+                          <div className="mt-1 text-sm leading-6 text-white/68">{item.detail}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section
+                className={`rounded-[2.1rem] border p-5 text-white shadow-[0_18px_40px_rgba(7,10,26,0.22)] backdrop-blur-xl sm:p-6 ${illustrationPanelClass}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <div
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.18em] ${illustrationBadgeClass}`}
+                    >
+                      {illustrationStatus.badge}
+                    </div>
+                    <p className="text-lg font-medium text-white">{illustrationStatus.title}</p>
+                    <p className="text-sm leading-6 text-white/78">{illustrationStatus.detail}</p>
+                  </div>
+                  <div className="rounded-full border border-white/18 bg-slate-950/45 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-white/82">
+                    {usage?.subscribed
+                      ? "Unlimited"
+                      : usage
+                        ? `${usage.remainingFreeImages}/${usage.dailyLimit}`
+                        : "..."}
+                  </div>
+                </div>
+
+                {subscriptionStatus?.actions.canManage ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void openSubscriptionPortal();
+                      }}
+                      disabled={billingPending}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/24 bg-slate-950/54 px-4 py-2.5 text-sm text-white transition hover:bg-slate-950/68 disabled:opacity-50"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {billingPending ? "Opening..." : "Manage subscription"}
+                    </button>
+                  </div>
+                ) : null}
+
+                {subscriptionStatus?.actions.canCheckout && usage && !usage.canGenerate ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void startSubscriptionCheckout();
+                      }}
+                      disabled={billingPending}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#ffd59c]/30 bg-[#ffd59c]/18 px-4 py-2.5 text-sm text-[#fff4e1] transition hover:bg-[#ffd59c]/24 disabled:opacity-50"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {billingPending ? "Opening..." : "Start paid subscription"}
+                    </button>
+                  </div>
+                ) : null}
+              </section>
+
+              <section className="rounded-[2.1rem] border border-white/20 bg-[#101a33]/84 p-5 text-sm text-white/78 shadow-[0_28px_90px_rgba(7,10,26,0.42)] backdrop-blur-md sm:p-6">
+                <div className="text-[11px] uppercase tracking-[0.24em] text-white/64">
+                  Story promise
+                </div>
+                <p className="mt-3 leading-7">
+                  Target: 10 minutes and exactly 600 story words across the reading pages.
+                </p>
+                <p className="mt-2 leading-7">{serviceStatusMessage}</p>
+                <p className="mt-2 leading-7">
+                  Story text always comes first. Cover art follows only when tonight&apos;s illustration access allows it.
+                </p>
+              </section>
+
+              {error ? (
+                <div className="flex items-start gap-2 rounded-[1.6rem] border border-rose-300/35 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+                  <AlertCircle className="mt-0.5 h-4 w-4" />
+                  <span>{error}</span>
                 </div>
               ) : null}
             </div>
-
-            <div className="rounded-xl border border-white/22 bg-slate-950/46 px-4 py-3 text-xs text-white/95">
-              <p>Target: 10 minutes and exactly 600 story words across the reading pages.</p>
-              <p className="mt-1">{serviceStatusMessage}</p>
-              <p className="mt-1">
-                Story text always comes first. Cover art follows only when tonight&apos;s illustration access allows it.
-              </p>
-            </div>
-
-            {error ? (
-              <div className="flex items-start gap-2 rounded-xl border border-rose-300/35 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
-                <AlertCircle className="mt-0.5 h-4 w-4" />
-                <span>{error}</span>
-              </div>
-            ) : null}
           </motion.div>
         </AnimatePresence>
       </div>

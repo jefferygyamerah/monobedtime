@@ -2,7 +2,10 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronRight } from "lucide-react";
+import Image from "next/image";
 import { useMemo, useState } from "react";
+import { SoundDock } from "@/components/sound-dock";
+import type { Soundscape } from "@/components/use-bedtime-audio";
 
 export type SetupProfile = {
   childName: string;
@@ -12,9 +15,13 @@ export type SetupProfile = {
 };
 
 export function SetupWizard({
+  activeSoundscape,
   onComplete,
+  onSelectSoundscape,
 }: {
+  activeSoundscape: Soundscape | null;
   onComplete: (profile: SetupProfile) => void;
+  onSelectSoundscape: (soundscape: Soundscape) => void;
 }) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<SetupProfile>({
@@ -108,13 +115,33 @@ export function SetupWizard({
               <p className="max-w-[24ch] text-sm leading-6 text-white/80 sm:text-[0.95rem]">
                 Three quick details help Mono make the first story feel personal right away.
               </p>
-            </div>
-            <div className="shrink-0 rounded-full border border-white/18 bg-slate-950/45 px-3 py-2 text-right">
-              <div className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-white/50">
-                progress
+              <div className="inline-flex items-center gap-3 rounded-full border border-white/14 bg-white/8 px-3 py-2">
+                <div className="shrink-0 overflow-hidden rounded-full border border-white/16 bg-white/8">
+                  <Image
+                    src="/luffy.png"
+                    alt="Luffy, the bedtime companion"
+                    width={44}
+                    height={44}
+                    className="h-11 w-11 object-cover"
+                    priority
+                  />
+                </div>
+                <div className="text-left">
+                  <div className="text-[10px] uppercase tracking-[0.18em] text-white/58">
+                    Tonight&apos;s companion
+                  </div>
+                  <div className="text-sm text-white/88">Luffy keeps the room gentle.</div>
+                </div>
               </div>
-              <div className="mt-1 text-sm font-medium text-white/88">
-                {step}/3
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 rounded-full border border-white/18 bg-slate-950/45 px-3 py-2 text-right">
+                <div className="text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-white/50">
+                  progress
+                </div>
+                <div className="mt-1 text-sm font-medium text-white/88">
+                  {step}/3
+                </div>
               </div>
             </div>
           </div>
@@ -294,6 +321,14 @@ export function SetupWizard({
               />
             )}
           </motion.button>
+
+          <div className="mt-4">
+            <SoundDock
+              activeSoundscape={activeSoundscape}
+              onSelectSoundscape={onSelectSoundscape}
+              compact
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -11,7 +11,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AmbientBackground } from "@/components/ambient-background";
 import { GlassMenu } from "@/components/glass-menu";
 import { PoodleCompanion } from "@/components/poodle-companion";
-import { useBedtimeAudio } from "@/components/use-bedtime-audio";
+import { ScenePoster } from "@/components/scene-poster";
+import type { Soundscape } from "@/components/use-bedtime-audio";
 import type {
   BedtimeResponse,
   IllustrationResponse,
@@ -23,6 +24,7 @@ type ReaderPage = {
   title: string;
   text: string;
   ambientColor: string;
+  sceneType: keyof typeof ambientColorByScene;
   triggerLuffyYawn: boolean;
   imageDataUrl: string | null;
   attribution?: IllustrationResponse["attribution"];
@@ -51,6 +53,7 @@ function buildReaderPages(
       title: story.title,
       text: story.coverScene.text,
       ambientColor: ambientColorByScene[story.coverScene.sceneType],
+      sceneType: story.coverScene.sceneType,
       triggerLuffyYawn: true,
       imageDataUrl: coverArt?.imageDataUrl ?? null,
       attribution: coverArt?.attribution,
@@ -64,6 +67,7 @@ function buildReaderPages(
       title: block.heading,
       text: block.text,
       ambientColor: ambientColorByScene[block.sceneType],
+      sceneType: block.sceneType,
       triggerLuffyYawn:
         index === story.storyBlocks.length - 1 ||
         block.sceneType === "moon" ||
@@ -100,6 +104,14 @@ function pageVariants(direction: number) {
   };
 }
 
+function compactCaption(text: string, maxLength = 140) {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength).trimEnd()}...`;
+}
+
 export function StoryBookReader({
   story,
   coverArt,
@@ -112,9 +124,11 @@ export function StoryBookReader({
   billingPending,
   subscriptionConfigured,
   actionError,
+  activeSoundscape,
   onNewStory,
   onGenerateCoverArt,
   onGenerateBlockArt,
+  onSelectSoundscape,
   onStartSubscription,
   onManageSubscription,
 }: {
@@ -129,9 +143,11 @@ export function StoryBookReader({
   billingPending: boolean;
   subscriptionConfigured: boolean;
   actionError: string | null;
+  activeSoundscape: Soundscape | null;
   onNewStory: () => void;
   onGenerateCoverArt: () => void;
   onGenerateBlockArt: (index: number) => void;
+  onSelectSoundscape: (soundscape: Soundscape) => void;
   onStartSubscription?: () => void;
   onManageSubscription?: () => void;
 }) {
@@ -139,7 +155,6 @@ export function StoryBookReader({
     () => buildReaderPages(story, coverArt, blockArt),
     [blockArt, coverArt, story],
   );
-  const { activeSoundscape, selectSoundscape } = useBedtimeAudio();
   const [currentPage, setCurrentPage] = useState(0);
   const [direction, setDirection] = useState(0);
   const [cueKey, setCueKey] = useState(0);
@@ -372,7 +387,7 @@ export function StoryBookReader({
         }}
         onNext={() => paginate(1)}
         onPrev={() => paginate(-1)}
-        onSelectSoundscape={selectSoundscape}
+        onSelectSoundscape={onSelectSoundscape}
         totalPages={pages.length}
         visible={controlsVisible}
       />
@@ -403,6 +418,13 @@ export function StoryBookReader({
                 className="story-paper mx-auto max-h-[min(60dvh,42rem)] max-w-xl overflow-y-auto rounded-[2rem] border border-white/24 bg-slate-950/42 px-5 py-6 shadow-[0_32px_110px_rgba(7,10,26,0.5)] backdrop-blur-2xl sm:max-h-none sm:rounded-[2.4rem] sm:px-10 sm:py-11"
               >
                 <div className="space-y-5 text-center sm:space-y-6">
+                  <ScenePoster
+                    title={page.title}
+                    caption={compactCaption(page.isCover ? story.summary : page.text)}
+                    sceneType={page.sceneType}
+                    imageDataUrl={page.imageDataUrl}
+                  />
+
                   <div className="space-y-2 sm:space-y-3">
                     <div className="text-[11px] uppercase tracking-[0.32em] text-white/62">
                       {page.isCover ? "Tonight's story" : `Page ${currentPage}`}
