@@ -1013,6 +1013,28 @@ export function NightlyScreen() {
                             {isGenerating ? "Waking up the stars..." : "Generate tonight's story"}
                           </span>
                         </button>
+
+                        <div className="mt-4">
+                          <div className="text-[11px] uppercase tracking-[0.22em] text-white/54">
+                            Quick visual picks
+                          </div>
+                          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                            {featuredIdeas.map((idea) => (
+                              <button
+                                key={`${idea.title}-hero`}
+                                type="button"
+                                onClick={() => setPrompt(idea.starter)}
+                                className="overflow-hidden rounded-[1.4rem] border border-white/12 bg-white/6 p-2 text-left transition hover:border-white/20 hover:bg-white/10"
+                              >
+                                <ScenePoster
+                                  title={idea.title}
+                                  caption={idea.caption}
+                                  sceneType={idea.sceneType}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
 

@@ -311,6 +311,16 @@ export function StoryBookReader({
     }
   }
 
+  function jumpToPage(nextPage: number) {
+    if (nextPage < 0 || nextPage >= pages.length || nextPage === currentPage) {
+      return;
+    }
+
+    revealControls();
+    setDirection(nextPage > currentPage ? 1 : -1);
+    setCurrentPage(nextPage);
+  }
+
   function handleDragEnd(_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) {
     const swipePower = Math.abs(info.offset.x) * Math.max(1, Math.abs(info.velocity.x));
 
@@ -473,6 +483,47 @@ export function StoryBookReader({
         </div>
 
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+          <div className="overflow-hidden rounded-[1.8rem] border border-white/18 bg-slate-950/30 p-3 backdrop-blur-xl sm:p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.22em] text-white/56">
+                  Story gallery
+                </div>
+                <div className="mt-1 text-sm text-white/76">
+                  Jump by image instead of only swiping page by page.
+                </div>
+              </div>
+              <div className="rounded-full border border-white/12 bg-white/6 px-3 py-2 text-[11px] uppercase tracking-[0.18em] text-white/74">
+                {pages.length} scenes
+              </div>
+            </div>
+
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {pages.map((readerPage, index) => (
+                <button
+                  key={`preview-${readerPage.pageNumber}`}
+                  type="button"
+                  onClick={() => jumpToPage(index)}
+                  className={`min-w-[220px] overflow-hidden rounded-[1.5rem] border p-2 text-left transition ${
+                    currentPage === index
+                      ? "border-[#d8e4ff]/32 bg-white/10 shadow-[0_16px_34px_rgba(129,140,248,0.14)]"
+                      : "border-white/12 bg-white/6 hover:border-white/20 hover:bg-white/10"
+                  }`}
+                >
+                  <ScenePoster
+                    title={readerPage.title}
+                    caption={compactCaption(
+                      readerPage.isCover ? story.summary : readerPage.text,
+                      90,
+                    )}
+                    sceneType={readerPage.sceneType}
+                    imageDataUrl={readerPage.imageDataUrl}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="rounded-[1.6rem] border border-white/18 bg-slate-950/34 p-3 backdrop-blur-xl sm:p-4">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div className="space-y-1">

@@ -86,6 +86,23 @@ export function SetupWizard({
       : step === 2
         ? "Language and age help Mono choose the right rhythm, vocabulary, and sleepy softness."
         : "Familiar places and cultural details help the story feel more personal without making setup heavy.";
+  const setupGallery = [
+    {
+      title: "Moon room",
+      caption: "A silver nursery glow for the softest opening scene.",
+      sceneType: "moon" as const,
+    },
+    {
+      title: "Sea drift",
+      caption: "A calmer horizon with a little motion and a safe landing.",
+      sceneType: "ocean" as const,
+    },
+    {
+      title: "Lantern trees",
+      caption: "A tiny forest path that still feels warm and tucked in.",
+      sceneType: "forest" as const,
+    },
+  ] as const;
 
   function updateForm(field: keyof SetupProfile, value: string) {
     setFormData((previous) => ({
@@ -230,6 +247,26 @@ export function SetupWizard({
                       );
                     })}
                   </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-white/54">
+                  Tonight&apos;s worlds
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  {setupGallery.map((item) => (
+                    <div
+                      key={item.title}
+                      className="overflow-hidden rounded-[1.7rem] border border-white/12 bg-white/6 p-3"
+                    >
+                      <ScenePoster
+                        title={item.title}
+                        caption={item.caption}
+                        sceneType={item.sceneType}
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
 
