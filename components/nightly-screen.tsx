@@ -840,6 +840,52 @@ export function NightlyScreen() {
           : illustrationStatus.tone === "error"
             ? "border-rose-200/30 bg-rose-300/14 text-rose-50"
             : "border-white/24 bg-white/10 text-white/88";
+  const activeSoundLabel = activeSoundscape
+    ? `${activeSoundscape.charAt(0).toUpperCase()}${activeSoundscape.slice(1)} on`
+    : "Sound off";
+  const moodCards = [
+    {
+      id: "calm",
+      icon: Wind,
+      label: "Calm",
+      detail: "Quiet skies, gentler wording, and softer landings.",
+      sceneType: "clouds" as const,
+    },
+    {
+      id: "warm",
+      icon: Flame,
+      label: "Warm",
+      detail: "Lamplight, closeness, and a room that feels held.",
+      sceneType: "village" as const,
+    },
+    {
+      id: "adventure",
+      icon: Moon,
+      label: "Adventure",
+      detail: "A brave little night journey that still settles softly.",
+      sceneType: "forest" as const,
+    },
+  ] as const;
+  const featuredIdeas = [
+    {
+      starter: promptStarters[0],
+      title: "Window Watch",
+      caption: "A sleepy room, silver moonlight, and Luffy guarding the night.",
+      sceneType: "moon" as const,
+    },
+    {
+      starter: promptStarters[1],
+      title: "Sea Drift",
+      caption: "A little boat, a silver shoreline, and stars reflected in the water.",
+      sceneType: "ocean" as const,
+    },
+    {
+      starter: promptStarters[2],
+      title: "Lantern Walk",
+      caption: "A tiny glowing path through the trees that ends in a warm tuck-in.",
+      sceneType: "forest" as const,
+    },
+  ] as const;
 
   return (
     <motion.div
@@ -855,7 +901,7 @@ export function NightlyScreen() {
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.12),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(129,140,248,0.22),transparent_30%)]" />
 
-      <div className="safe-top safe-bottom-lg safe-left safe-right relative z-10 mx-auto max-w-5xl px-4 pb-24 pt-8 sm:px-6 sm:pb-16 sm:pt-12">
+      <div className="safe-top safe-bottom-lg safe-left safe-right relative z-10 mx-auto max-w-7xl px-4 pb-24 pt-8 sm:px-6 sm:pb-16 sm:pt-12">
         <AnimatePresence mode="wait">
           <motion.div
             key="ui-panel"
@@ -863,99 +909,151 @@ export function NightlyScreen() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, filter: "blur(10px)", scale: 0.95 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="grid gap-6 lg:grid-cols-[1.12fr_0.88fr]"
+            className="grid gap-6 lg:grid-cols-[1.18fr_0.82fr]"
           >
             <div className="flex flex-col gap-6">
-              <section className="relative overflow-hidden rounded-[2.3rem] border border-white/20 bg-[#101a33]/86 p-5 shadow-[0_30px_110px_rgba(7,10,26,0.48)] backdrop-blur-md sm:p-6">
-                <div className="absolute right-4 top-4 hidden overflow-hidden rounded-[1.6rem] border border-white/18 bg-white/10 shadow-[0_20px_40px_rgba(7,10,26,0.28)] sm:block">
-                  <Image
-                    src="/luffy.png"
-                    alt="Luffy, the bedtime companion"
-                    width={120}
-                    height={144}
-                    className="h-[144px] w-[120px] object-cover"
-                    priority
-                  />
-                </div>
+              <section className="relative overflow-hidden rounded-[2.4rem] border border-white/18 bg-[#07111f]/90 p-5 shadow-[0_34px_120px_rgba(2,6,23,0.56)] sm:p-6">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_22%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0)_24%,rgba(4,9,21,0.28)_100%)]" />
 
-                <div className="max-w-[32rem]">
-                  <div className="mb-4 flex items-center gap-3">
-                    <MonkeyMark className="rounded-[24px] border-white/20 bg-white/22 p-2.5" />
-                    <div className="rounded-full border border-white/16 bg-white/8 px-3 py-2 text-[11px] uppercase tracking-[0.22em] text-white/76">
-                      Night story studio
+                <div className="relative z-10">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <MonkeyMark className="rounded-[24px] border-white/20 bg-white/18 p-2.5" />
+                      <div className="rounded-full border border-white/12 bg-white/6 px-3 py-2 text-[11px] uppercase tracking-[0.26em] text-[#9ab8ff]">
+                        Featured tonight
+                      </div>
+                    </div>
+
+                    <div className="rounded-full border border-white/12 bg-white/6 px-3 py-2 text-[11px] uppercase tracking-[0.18em] text-white/72">
+                      {activeSoundscape
+                        ? `${activeSoundscape.charAt(0).toUpperCase()}${activeSoundscape.slice(1)} on`
+                        : "Add sound"}
                     </div>
                   </div>
 
-                  <h1 className="max-w-[12ch] text-balance text-[2.4rem] font-light leading-[0.98] text-white sm:text-[3.2rem]">
-                    Good evening, {profile?.childName || "little one"}.
-                  </h1>
-                  <p className="mt-4 max-w-[30rem] text-base leading-7 text-white/78">
-                    Shape tonight&apos;s story with a mood, a spark of an idea, and one room tone.
-                    We&apos;ll do the rest.
-                  </p>
-                </div>
+                  <div className="mt-5 grid gap-5 xl:grid-cols-[1.02fr_0.98fr]">
+                    <div className="flex flex-col gap-5">
+                      <div className="max-w-[34rem]">
+                        <p className="text-[11px] uppercase tracking-[0.26em] text-white/50">
+                          Night story studio
+                        </p>
+                        <h1 className="mt-3 max-w-[12ch] text-balance text-[2.65rem] font-light leading-[0.95] text-white sm:text-[3.9rem]">
+                          Bedtime feels like a premiere again.
+                        </h1>
+                        <p className="mt-4 max-w-[31rem] text-base leading-7 text-white/74">
+                          Good evening, {profile?.childName || "little one"}. Set the tone, pick a
+                          room sound, and start a story that looks like it belongs on screen.
+                        </p>
+                      </div>
 
-                <div className="mt-6 overflow-hidden rounded-[2rem] border border-white/14 bg-slate-950/30 p-2">
-                  <ScenePoster
-                    title={previewTitle}
-                    caption={previewCaption}
-                    sceneType={previewSceneType}
-                  />
-                </div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-[1.6rem] border border-white/12 bg-white/6 p-4">
+                          <div className="text-[10px] uppercase tracking-[0.2em] text-white/52">
+                            For tonight
+                          </div>
+                          <div className="mt-2 text-lg font-medium text-white">
+                            {profile?.childName || "Little one"}
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-white/68">
+                            {profile?.age || "0 years"}, {profileLanguageLabel}
+                          </p>
+                        </div>
 
-                <div className="mt-6 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs uppercase tracking-[0.18em] text-white/92">
-                      Story seed
-                    </span>
-                    <span className="rounded-full border border-white/16 bg-white/8 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-white/78">
-                      Detailed mode
-                    </span>
+                        <div className="rounded-[1.6rem] border border-white/12 bg-white/6 p-4">
+                          <div className="text-[10px] uppercase tracking-[0.2em] text-white/52">
+                            Story promise
+                          </div>
+                          <div className="mt-2 text-lg font-medium text-white">10 calm minutes</div>
+                          <p className="mt-2 text-sm leading-6 text-white/68">
+                            600 words and a clean, cinematic reading flow.
+                          </p>
+                        </div>
+
+                        <div className="rounded-[1.6rem] border border-white/12 bg-white/6 p-4">
+                          <div className="text-[10px] uppercase tracking-[0.2em] text-white/52">
+                            Companion
+                          </div>
+                          <div className="mt-2 text-lg font-medium text-white">Luffy on watch</div>
+                          <p className="mt-2 text-sm leading-6 text-white/68">
+                            A softer presence in the room so it feels guided, not generated.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-[2rem] border border-white/12 bg-[#030711]/70 p-4 sm:p-5">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs uppercase tracking-[0.18em] text-white/88">
+                            Story brief
+                          </span>
+                          <span className="rounded-full border border-white/12 bg-white/6 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-white/72">
+                            Detailed mode
+                          </span>
+                        </div>
+                        <textarea
+                          rows={5}
+                          value={prompt}
+                          onChange={(event) => setPrompt(event.target.value)}
+                          placeholder="Share the bedtime idea. Example: Mono helps the nursery settle while little Luffy watches the moon through the window."
+                          className="mt-4 min-h-[180px] w-full resize-none rounded-[1.7rem] border border-white/14 bg-[#02050d]/90 px-5 py-5 text-base leading-7 text-white placeholder:text-white/38 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all focus:border-[#b6c8ff]/48 focus:outline-none"
+                          aria-label="Story prompt input"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={handleGenerate}
+                          disabled={isGenerating}
+                          className="group mt-4 flex w-full items-center justify-center gap-3 rounded-[1.55rem] border border-[#c9d3ff]/28 bg-[linear-gradient(135deg,rgba(191,219,254,0.26),rgba(129,140,248,0.34),rgba(251,191,36,0.18))] px-6 py-5 text-white transition hover:border-[#dce6ff]/42 hover:shadow-[0_18px_50px_rgba(129,140,248,0.24)] disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {isGenerating ? (
+                            <LoaderCircle size={18} className="animate-spin" />
+                          ) : (
+                            <Sparkles size={18} className="opacity-70 transition-opacity group-hover:opacity-100" />
+                          )}
+                          <span className="text-sm font-semibold uppercase tracking-[0.18em]">
+                            {isGenerating ? "Waking up the stars..." : "Generate tonight's story"}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                      <ScenePoster
+                        title={previewTitle}
+                        caption={previewCaption}
+                        sceneType={previewSceneType}
+                        variant="hero"
+                      />
+
+                      <div className="overflow-hidden rounded-[1.8rem] border border-white/12 bg-white/6 p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="overflow-hidden rounded-[1.2rem] border border-white/12 bg-white/8">
+                            <Image
+                              src="/luffy.png"
+                              alt="Luffy, the bedtime companion"
+                              width={80}
+                              height={104}
+                              className="h-[104px] w-[80px] object-cover"
+                              priority
+                            />
+                          </div>
+                          <div>
+                            <div className="text-[10px] uppercase tracking-[0.18em] text-white/50">
+                              Companion spotlight
+                            </div>
+                            <div className="mt-2 text-xl font-medium text-white">Luffy</div>
+                            <p className="mt-2 text-sm leading-6 text-white/70">
+                              Keeping the room soft while the next story comes together.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <SoundDock
+                        activeSoundscape={activeSoundscape}
+                        onSelectSoundscape={selectSoundscape}
+                      />
+                    </div>
                   </div>
-                  <textarea
-                    rows={5}
-                    value={prompt}
-                    onChange={(event) => setPrompt(event.target.value)}
-                    placeholder="Share the bedtime idea. Example: Mono helps the nursery settle while little Luffy watches the moon through the window."
-                    className="min-h-[160px] w-full resize-none rounded-[1.8rem] border border-white/20 bg-slate-950/78 px-5 py-5 text-base leading-7 text-white placeholder:text-white/42 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all focus:border-indigo-100/80 focus:bg-slate-950/90 focus:outline-none"
-                    aria-label="Story prompt input"
-                  />
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {promptStarters.map((starter) => (
-                    <button
-                      key={starter}
-                      type="button"
-                      onClick={() => setPrompt(starter)}
-                      className="rounded-full border border-white/16 bg-white/8 px-4 py-2 text-sm text-white/84 transition hover:bg-white/12"
-                    >
-                      {starter}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                  className="group mt-6 flex w-full items-center justify-center gap-3 rounded-[1.7rem] border border-[#c9d3ff]/34 bg-[linear-gradient(135deg,rgba(191,219,254,0.24),rgba(129,140,248,0.34),rgba(251,191,36,0.18))] px-6 py-5 text-white transition hover:border-[#dce6ff]/48 hover:shadow-[0_18px_50px_rgba(129,140,248,0.24)] disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {isGenerating ? (
-                    <LoaderCircle size={18} className="animate-spin" />
-                  ) : (
-                    <Sparkles size={18} className="opacity-70 transition-opacity group-hover:opacity-100" />
-                  )}
-                  <span className="text-base font-medium tracking-wide">
-                    {isGenerating ? "Waking up the stars..." : "Generate tonight's story"}
-                  </span>
-                </button>
-
-                <div className="mt-6">
-                  <SoundDock
-                    activeSoundscape={activeSoundscape}
-                    onSelectSoundscape={selectSoundscape}
-                  />
                 </div>
               </section>
             </div>
@@ -964,11 +1062,11 @@ export function NightlyScreen() {
               <section className="rounded-[2.1rem] border border-white/20 bg-[#101a33]/84 p-5 shadow-[0_28px_90px_rgba(7,10,26,0.42)] backdrop-blur-md sm:p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <div className="text-[11px] uppercase tracking-[0.24em] text-white/64">
-                      Tonight&apos;s profile
+                    <div className="text-[11px] uppercase tracking-[0.24em] text-white/54">
+                      Now streaming for
                     </div>
                     <h2 className="mt-3 text-2xl font-light text-white">
-                      Built for {profile?.childName || "your little one"}
+                      {profile?.childName || "Your little one"}
                     </h2>
                   </div>
                   <button
@@ -980,21 +1078,33 @@ export function NightlyScreen() {
                   </button>
                 </div>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-[1.5rem] border border-white/14 bg-slate-950/38 px-4 py-4 text-sm text-white/82">
-                    <div className="text-[10px] uppercase tracking-[0.18em] text-white/54">
-                      Age + language
+                <div className="mt-5 grid gap-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[1.5rem] border border-white/14 bg-slate-950/38 px-4 py-4 text-sm text-white/82">
+                      <div className="text-[10px] uppercase tracking-[0.18em] text-white/54">
+                        Age + language
+                      </div>
+                      <div className="mt-2 text-base text-white">
+                        {profile?.age || "0 years"}, {profileLanguageLabel}
+                      </div>
                     </div>
-                    <div className="mt-2 text-base text-white">
-                      {profile?.age || "0 years"}, {profileLanguageLabel}
+                    <div className="rounded-[1.5rem] border border-white/14 bg-slate-950/38 px-4 py-4 text-sm text-white/82">
+                      <div className="text-[10px] uppercase tracking-[0.18em] text-white/54">
+                        Roots
+                      </div>
+                      <div className="mt-2 text-base text-white">
+                        {profile?.culture || "family bedtime traditions"}
+                      </div>
                     </div>
                   </div>
+
                   <div className="rounded-[1.5rem] border border-white/14 bg-slate-950/38 px-4 py-4 text-sm text-white/82">
                     <div className="text-[10px] uppercase tracking-[0.18em] text-white/54">
-                      Roots
+                      Room sound
                     </div>
-                    <div className="mt-2 text-base text-white">
-                      {profile?.culture || "family bedtime traditions"}
+                    <div className="mt-2 text-base text-white">{activeSoundLabel}</div>
+                    <div className="mt-2 text-sm leading-6 text-white/64">
+                      The selected soundscape stays with setup, story generation, and reading.
                     </div>
                   </div>
                 </div>
@@ -1005,43 +1115,33 @@ export function NightlyScreen() {
                   Choose the atmosphere
                 </div>
                 <div className="mt-4 grid gap-3">
-                  {[
-                    {
-                      id: "calm",
-                      icon: Wind,
-                      label: "Calm",
-                      detail: "Clouds, quiet breathing, and slower page turns.",
-                    },
-                    {
-                      id: "warm",
-                      icon: Flame,
-                      label: "Warm",
-                      detail: "Window glow, closeness, and a room that feels safe.",
-                    },
-                    {
-                      id: "adventure",
-                      icon: Moon,
-                      label: "Adventure",
-                      detail: "A tiny brave journey with a very soft landing.",
-                    },
-                  ].map((item) => (
+                  {moodCards.map((item) => (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => setMood(item.id as Mood)}
-                      className={`rounded-[1.6rem] border px-4 py-4 text-left transition-all duration-300 ${
+                      className={`overflow-hidden rounded-[1.8rem] border text-left transition-all duration-300 ${
                         mood === item.id
                           ? "border-[#d6ddff]/34 bg-[linear-gradient(135deg,rgba(191,219,254,0.16),rgba(129,140,248,0.2),rgba(255,214,153,0.14))] text-white shadow-[0_12px_34px_rgba(129,140,248,0.16)]"
                           : "border-white/14 bg-slate-950/34 text-white/88 hover:bg-slate-950/48"
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/16 bg-white/8">
-                          <item.icon size={20} strokeWidth={1.6} />
-                        </div>
-                        <div>
-                          <div className="text-base font-medium">{item.label}</div>
-                          <div className="mt-1 text-sm leading-6 text-white/68">{item.detail}</div>
+                      <div className="p-3">
+                        <ScenePoster
+                          title={item.label}
+                          caption={item.detail}
+                          sceneType={item.sceneType}
+                        />
+                      </div>
+                      <div className="px-4 pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/16 bg-white/8">
+                            <item.icon size={20} strokeWidth={1.6} />
+                          </div>
+                          <div>
+                            <div className="text-base font-medium">{item.label}</div>
+                            <div className="mt-1 text-sm leading-6 text-white/68">{item.detail}</div>
+                          </div>
                         </div>
                       </div>
                     </button>
@@ -1106,15 +1206,36 @@ export function NightlyScreen() {
 
               <section className="rounded-[2.1rem] border border-white/20 bg-[#101a33]/84 p-5 text-sm text-white/78 shadow-[0_28px_90px_rgba(7,10,26,0.42)] backdrop-blur-md sm:p-6">
                 <div className="text-[11px] uppercase tracking-[0.24em] text-white/64">
-                  Story promise
+                  Featured bedtime ideas
                 </div>
                 <p className="mt-3 leading-7">
-                  Target: 10 minutes and exactly 600 story words across the reading pages.
+                  Drop in a stronger starting point when you want the app to feel more like a curated library than a blank textbox.
                 </p>
-                <p className="mt-2 leading-7">{serviceStatusMessage}</p>
-                <p className="mt-2 leading-7">
-                  Story text always comes first. Cover art follows only when tonight&apos;s illustration access allows it.
-                </p>
+
+                <div className="mt-4 grid gap-3">
+                  {featuredIdeas.map((idea) => (
+                    <button
+                      key={idea.title}
+                      type="button"
+                      onClick={() => setPrompt(idea.starter)}
+                      className="overflow-hidden rounded-[1.6rem] border border-white/14 bg-slate-950/34 text-left transition hover:border-white/20 hover:bg-slate-950/46"
+                    >
+                      <div className="p-3">
+                        <ScenePoster
+                          title={idea.title}
+                          caption={idea.caption}
+                          sceneType={idea.sceneType}
+                        />
+                      </div>
+                      <div className="px-4 pb-4">
+                        <div className="text-base font-medium text-white">{idea.title}</div>
+                        <div className="mt-1 text-sm leading-6 text-white/66">{idea.caption}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <p className="mt-4 leading-7">{serviceStatusMessage}</p>
               </section>
 
               {error ? (

@@ -142,7 +142,7 @@ export function GlassMenu({
       >
         <div className="glass-panel inline-flex items-center gap-3 rounded-full px-4 py-2.5 text-xs uppercase tracking-[0.28em] text-[#f7ebcf]/82">
           <MoonStar className="h-4 w-4" />
-          monobedtime
+          monobedtime originals
         </div>
 
         <div className="glass-panel inline-flex items-center gap-2 rounded-full px-2 py-2">
@@ -157,7 +157,7 @@ export function GlassMenu({
           >
             <Volume2 className="h-5 w-5" />
             <span className="text-[11px] uppercase tracking-[0.2em]">
-              {activeSoundscape ? `${soundscapeLabel[activeSoundscape]} on` : "Sound"}
+              {activeSoundscape ? `Now playing ${soundscapeLabel[activeSoundscape]}` : "Choose sound"}
             </span>
           </button>
         </div>
@@ -208,7 +208,7 @@ export function GlassMenu({
               <div className="mb-4 flex items-start justify-between gap-4">
                 <div>
                   <div className="text-xs uppercase tracking-[0.26em] text-[#cad6ff]/82">
-                    ambiance drawer
+                    now playing
                   </div>
                   <h2 className="mt-2 text-lg font-semibold text-[#f6ead8]">
                     Night soundscapes

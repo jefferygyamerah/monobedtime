@@ -168,6 +168,9 @@ export function StoryBookReader({
     ? loadingCover
     : Boolean(loadingBlocks[currentPage - 1]);
   const canGenerateImages = !usage || usage.canGenerate || usage.subscribed;
+  const currentSoundLabel = activeSoundscape
+    ? `${activeSoundscape.charAt(0).toUpperCase()}${activeSoundscape.slice(1)} playing`
+    : "Sound off";
 
   const imageStatus = statusState === "loading"
     ? {
@@ -423,11 +426,17 @@ export function StoryBookReader({
                     caption={compactCaption(page.isCover ? story.summary : page.text)}
                     sceneType={page.sceneType}
                     imageDataUrl={page.imageDataUrl}
+                    variant="reader"
                   />
 
                   <div className="space-y-2 sm:space-y-3">
-                    <div className="text-[11px] uppercase tracking-[0.32em] text-white/62">
-                      {page.isCover ? "Tonight's story" : `Page ${currentPage}`}
+                    <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] uppercase tracking-[0.24em] text-white/62">
+                      <span className="rounded-full border border-white/12 bg-white/6 px-3 py-1">
+                        {page.isCover ? "Tonight's story" : `Page ${currentPage}`}
+                      </span>
+                      <span className="rounded-full border border-white/12 bg-white/6 px-3 py-1">
+                        {currentSoundLabel}
+                      </span>
                     </div>
                     <h1 className="sleepy-text text-balance text-[1.9rem] font-light leading-tight text-white sm:text-4xl">
                       {page.title}
@@ -486,6 +495,7 @@ export function StoryBookReader({
                   {imageStatus.label}
                 </div>
                 <p className="text-sm leading-6 text-white/88">{imageStatus.detail}</p>
+                <p className="text-[11px] leading-5 text-white/70">Room sound: {currentSoundLabel}.</p>
                 <p className="text-[11px] leading-5 text-white/70">
                   {actionNote}
                 </p>
