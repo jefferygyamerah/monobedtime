@@ -28,6 +28,22 @@ const MAX_TAG_CHARS = 24;
 const MIN_TAGS = 3;
 const MAX_TAGS = 6;
 
+function logStoryRuntimeEvent(
+  level: "warn" | "error",
+  event: string,
+  payload: Record<string, unknown>,
+) {
+  const logger = level === "warn" ? console.warn : console.error;
+  logger(
+    JSON.stringify({
+      scope: "monobedtime.story-runtime",
+      event,
+      ...payload,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+}
+
 const storySceneDraftSchema = z
   .object({
     heading: z.string().min(1).max(200),
@@ -664,6 +680,10 @@ export async function generateBedtimeStory(rawInput: unknown) {
   const input = bedtimeRequestSchema.parse(rawInput);
 
   if (!process.env.DEEPSEEK_API_KEY) {
+    logStoryRuntimeEvent("warn", "deepseek_not_configured_fallback", {
+      kidName: input.kidName,
+      language: input.language,
+    });
     return buildFallbackStory(input);
   }
 
@@ -683,13 +703,19 @@ export async function generateBedtimeStory(rawInput: unknown) {
       try {
         story = await applyGeminiQualityPass(story, input);
       } catch (geminiError) {
-        console.error("Gemini quality pass failed, keeping DeepSeek story:", geminiError);
+        logStoryRuntimeEvent("warn", "gemini_quality_pass_failed", {
+          message: geminiError instanceof Error ? geminiError.message : String(geminiError),
+        });
       }
     }
 
     return story;
   } catch (error) {
-    console.error("Monobedtime story generation fell back to local template:", error);
+    logStoryRuntimeEvent("error", "deepseek_generation_failed_fallback", {
+      message: error instanceof Error ? error.message : String(error),
+      language: input.language,
+      theme: input.theme,
+    });
     return buildFallbackStory(input);
   }
 }

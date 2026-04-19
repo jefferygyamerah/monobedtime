@@ -23,10 +23,19 @@ function getStripe() {
 }
 
 function getSigningSecret() {
-  return (
-    process.env.COOKIE_SIGNING_SECRET ??
-    process.env.STRIPE_SECRET_KEY ??
-    "monobedtime-dev-subscription-secret"
+  const explicitSecret = process.env.COOKIE_SIGNING_SECRET?.trim();
+  if (explicitSecret) {
+    return explicitSecret;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return (
+      process.env.STRIPE_SECRET_KEY?.trim() ?? "monobedtime-dev-subscription-secret"
+    );
+  }
+
+  throw new Error(
+    "COOKIE_SIGNING_SECRET is required in production to sign subscription cookies.",
   );
 }
 

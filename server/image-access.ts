@@ -5,26 +5,9 @@ import {
   isImageSubscriptionConfigured,
   verifyImageSubscription,
 } from "@/server/subscription-access";
+import { getDailyUsage, reserveDailyUsage } from "@/server/usage-access";
 
 export const FREE_IMAGE_LIMIT_PER_DAY = 3;
-
-type UsageRecord = {
-  dayKey: string;
-  usedFreeImages: number;
-};
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __monobedtimeImageUsageStore: Map<string, UsageRecord> | undefined;
-}
-
-function getStore() {
-  if (!globalThis.__monobedtimeImageUsageStore) {
-    globalThis.__monobedtimeImageUsageStore = new Map<string, UsageRecord>();
-  }
-
-  return globalThis.__monobedtimeImageUsageStore;
-}
 
 export function normalizeSessionId(rawValue?: string | null) {
   const trimmed = rawValue?.trim();
@@ -39,27 +22,6 @@ export function normalizeDayKey(rawValue?: string | null) {
   }
 
   return new Date().toISOString().slice(0, 10);
-}
-
-function getUsageRecord(sessionId: string, dayKey: string) {
-  const store = getStore();
-  const key = `${dayKey}:${sessionId}`;
-  const current = store.get(key);
-
-  if (!current || current.dayKey !== dayKey) {
-    return {
-      key,
-      record: {
-        dayKey,
-        usedFreeImages: 0,
-      },
-    };
-  }
-
-  return {
-    key,
-    record: current,
-  };
 }
 
 function toUsage(subscribed: boolean, usedFreeImages: number): ImageUsage {
@@ -94,8 +56,12 @@ export async function getImageUsageStatus({
     return toUsage(true, 0);
   }
 
-  const { record } = getUsageRecord(sessionId, dayKey);
-  return toUsage(false, record.usedFreeImages);
+  const usage = await getDailyUsage({
+    kind: "image",
+    dayKey,
+    sessionId,
+  });
+  return toUsage(false, usage.used);
 }
 
 export async function reserveImageGeneration({
@@ -116,24 +82,22 @@ export async function reserveImageGeneration({
     };
   }
 
-  const { key, record } = getUsageRecord(sessionId, dayKey);
+  const reservation = await reserveDailyUsage({
+    kind: "image",
+    dayKey,
+    sessionId,
+    limitPerDay: FREE_IMAGE_LIMIT_PER_DAY,
+  });
 
-  if (record.usedFreeImages >= FREE_IMAGE_LIMIT_PER_DAY) {
+  if (!reservation.allowed) {
     return {
       allowed: false,
-      usage: toUsage(false, record.usedFreeImages),
+      usage: toUsage(false, reservation.used),
     };
   }
 
-  const nextRecord = {
-    dayKey,
-    usedFreeImages: record.usedFreeImages + 1,
-  };
-
-  getStore().set(key, nextRecord);
-
   return {
     allowed: true,
-    usage: toUsage(false, nextRecord.usedFreeImages),
+    usage: toUsage(false, reservation.used),
   };
 }

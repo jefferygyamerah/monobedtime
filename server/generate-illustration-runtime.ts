@@ -13,6 +13,22 @@ let googleProvider: ReturnType<typeof createGoogleGenerativeAI> | null = null;
 
 const UNSPLASH_APP_NAME = "monobedtime";
 
+function logIllustrationRuntimeEvent(
+  level: "warn" | "error",
+  event: string,
+  payload: Record<string, unknown>,
+) {
+  const logger = level === "warn" ? console.warn : console.error;
+  logger(
+    JSON.stringify({
+      scope: "monobedtime.illustration-runtime",
+      event,
+      ...payload,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+}
+
 function getGoogle() {
   if (!googleProvider) {
     googleProvider = createGoogleGenerativeAI({
@@ -335,6 +351,11 @@ export async function generateIllustrationWithOptions(
       return unsplash;
     }
 
+    logIllustrationRuntimeEvent("warn", "unsplash_not_available_preferred", {
+      sceneType: input.sceneType,
+      language: input.language,
+    });
+
     return buildFallback(
       input,
       localizedNote(
@@ -351,6 +372,11 @@ export async function generateIllustrationWithOptions(
       return unsplash;
     }
 
+    logIllustrationRuntimeEvent("warn", "gemini_not_configured_fallback", {
+      sceneType: input.sceneType,
+      language: input.language,
+    });
+
     return buildFallback(
       input,
       localizedNote(
@@ -364,7 +390,9 @@ export async function generateIllustrationWithOptions(
   try {
     return await tryGeminiImage(input);
   } catch (geminiError) {
-    console.error("Gemini illustration attempt failed, trying Gemini preview:", geminiError);
+    logIllustrationRuntimeEvent("warn", "gemini_image_failed", {
+      message: geminiError instanceof Error ? geminiError.message : String(geminiError),
+    });
 
     const note = quotaFallbackNote(geminiError, input);
 
@@ -381,10 +409,12 @@ export async function generateIllustrationWithOptions(
   try {
     return await tryGeminiPreviewImage(input);
   } catch (geminiPreviewError) {
-    console.error(
-      "Gemini preview illustration attempt failed, trying Imagen:",
-      geminiPreviewError,
-    );
+    logIllustrationRuntimeEvent("warn", "gemini_preview_failed", {
+      message:
+        geminiPreviewError instanceof Error
+          ? geminiPreviewError.message
+          : String(geminiPreviewError),
+    });
 
     const note = quotaFallbackNote(geminiPreviewError, input);
 
@@ -401,10 +431,11 @@ export async function generateIllustrationWithOptions(
   try {
     return await tryImagen(input);
   } catch (imagenError) {
-    console.error(
-      "Monobedtime illustration generation fell back after Gemini and Imagen failures:",
-      imagenError,
-    );
+    logIllustrationRuntimeEvent("error", "imagen_failed_fallback", {
+      message: imagenError instanceof Error ? imagenError.message : String(imagenError),
+      sceneType: input.sceneType,
+      language: input.language,
+    });
 
     const unsplash = await tryUnsplash(input);
     if (unsplash) {

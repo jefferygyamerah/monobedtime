@@ -11,6 +11,12 @@ import { ZodError } from "zod";
 
 export const runtime = "nodejs";
 
+type ApiErrorResponse = {
+  code: string;
+  error: string;
+  details?: unknown;
+};
+
 function toErrorMessage(error: unknown) {
   if (error instanceof ZodError) {
     return "We could not prepare that illustration request. Please try again.";
@@ -21,10 +27,43 @@ function toErrorMessage(error: unknown) {
     : "No pudimos crear la ilustracion de esta escena.";
 }
 
+function jsonError(status: number, payload: ApiErrorResponse) {
+  return Response.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
 export async function POST(request: Request) {
+  let rawInput: unknown;
+
   try {
-    const rawInput = await request.json();
-    illustrationRequestSchema.parse(rawInput);
+    rawInput = await request.json();
+  } catch {
+    return jsonError(400, {
+      code: "INVALID_JSON",
+      error: "Request body must be valid JSON.",
+    });
+  }
+
+  const parsedInput = illustrationRequestSchema.safeParse(rawInput);
+  if (!parsedInput.success) {
+    const firstIssue = parsedInput.error.issues[0];
+    return jsonError(422, {
+      code: "INVALID_ILLUSTRATION_REQUEST",
+      error: toErrorMessage(parsedInput.error),
+      details: firstIssue
+        ? {
+            path: firstIssue.path.join("."),
+            message: firstIssue.message,
+          }
+        : undefined,
+    });
+  }
+
+  try {
     const cookieStore = cookies();
     const allowance = await reserveImageGeneration({
       dayKey: normalizeDayKey(request.headers.get("x-monobedtime-day-key")),
@@ -52,7 +91,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const illustration = await generateIllustrationWithOptions(rawInput, {
+    const illustration = await generateIllustrationWithOptions(parsedInput.data, {
       // Free tier: use Unsplash (no per-image AI cost). Subscribers: prefer AI.
       preferUnsplash: !allowance.usage.subscribed,
     });
@@ -68,13 +107,13 @@ export async function POST(request: Request) {
       },
     );
   } catch (error) {
-    return Response.json(
-      {
-        error: toErrorMessage(error),
-      },
-      {
-        status: 400,
-      },
+    console.error(
+      "[monobedtime:api:generate-illustration] provider/runtime failure",
+      error,
     );
+    return jsonError(502, {
+      code: "ILLUSTRATION_GENERATION_UNAVAILABLE",
+      error: toErrorMessage(error),
+    });
   }
 }
