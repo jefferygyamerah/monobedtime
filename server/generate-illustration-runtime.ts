@@ -12,8 +12,10 @@ import {
 let googleProvider: ReturnType<typeof createGoogleGenerativeAI> | null = null;
 
 const UNSPLASH_APP_NAME = "monobedtime";
-const FAL_FLUX_MODEL_URL = "https://fal.run/fal-ai/flux/schnell";
+/** Queue API is fal’s recommended path; survives cold starts better than synchronous fal.run. */
+const FAL_FLUX_QUEUE_SUBMIT_URL = "https://queue.fal.run/fal-ai/flux/schnell";
 const FAL_FETCH_TIMEOUT_MS = 120_000;
+const FAL_QUEUE_POLL_MS = 750;
 
 function freeTierPrefersStockPhotosFirst() {
   return process.env.MONOBEDTIME_FREE_TIER_STOCK_FIRST === "true";
@@ -345,34 +347,105 @@ async function tryGeminiImage(input: IllustrationRequest) {
   );
 }
 
+function falFluxInputBody(input: IllustrationRequest) {
+  return JSON.stringify({
+    prompt: buildPrompt(input),
+    image_size: "landscape_16_9",
+    num_images: 1,
+    enable_safety_checker: true,
+  });
+}
+
 async function tryFalImage(input: IllustrationRequest) {
   const falKey = getFalApiKey().trim();
   if (!falKey) {
     throw new Error("FAL is not configured.");
   }
 
-  const response = await fetch(FAL_FLUX_MODEL_URL, {
+  const authHeaders = {
+    Authorization: `Key ${falKey}`,
+    "Content-Type": "application/json",
+  } as const;
+
+  const body = falFluxInputBody(input);
+
+  const submitResponse = await fetch(FAL_FLUX_QUEUE_SUBMIT_URL, {
     method: "POST",
-    headers: {
-      Authorization: `Key ${falKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      prompt: buildPrompt(input),
-      image_size: "landscape_16_9",
-      num_images: 1,
-      enable_safety_checker: true,
-    }),
+    headers: authHeaders,
+    body,
     cache: "no-store",
-    signal: AbortSignal.timeout(FAL_FETCH_TIMEOUT_MS),
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`FAL image generation failed: ${response.status} ${errorText}`);
+  if (!submitResponse.ok) {
+    const errorText = await submitResponse.text();
+    throw new Error(`FAL queue submit failed: ${submitResponse.status} ${errorText}`);
   }
 
-  const payload: unknown = await response.json();
+  const submitPayload = (await submitResponse.json()) as {
+    request_id?: string;
+    status_url?: string;
+  };
+
+  const requestId = submitPayload.request_id;
+  if (!requestId) {
+    throw new Error("FAL queue submit returned no request_id.");
+  }
+
+  const statusUrl =
+    submitPayload.status_url ??
+    `${FAL_FLUX_QUEUE_SUBMIT_URL}/requests/${requestId}/status`;
+
+  const deadline = Date.now() + FAL_FETCH_TIMEOUT_MS;
+  let completedOk = false;
+
+  while (Date.now() < deadline) {
+    const statusResponse = await fetch(statusUrl, {
+      headers: { Authorization: `Key ${falKey}` },
+      cache: "no-store",
+    });
+
+    if (!statusResponse.ok) {
+      const errorText = await statusResponse.text();
+      throw new Error(`FAL queue status failed: ${statusResponse.status} ${errorText}`);
+    }
+
+    const statusPayload = (await statusResponse.json()) as {
+      status?: string;
+      error?: string;
+      error_type?: string;
+    };
+
+    if (statusPayload.status === "COMPLETED") {
+      if (statusPayload.error) {
+        throw new Error(
+          `FAL generation failed: ${statusPayload.error}${
+            statusPayload.error_type ? ` (${statusPayload.error_type})` : ""
+          }`,
+        );
+      }
+      completedOk = true;
+      break;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, FAL_QUEUE_POLL_MS));
+  }
+
+  if (!completedOk) {
+    throw new Error("FAL queue timed out waiting for completion.");
+  }
+
+  const resultUrl = `${FAL_FLUX_QUEUE_SUBMIT_URL}/requests/${requestId}`;
+  const resultResponse = await fetch(resultUrl, {
+    headers: { Authorization: `Key ${falKey}` },
+    cache: "no-store",
+  });
+
+  if (!resultResponse.ok) {
+    const errorText = await resultResponse.text();
+    throw new Error(`FAL queue result failed: ${resultResponse.status} ${errorText}`);
+  }
+
+  const payload: unknown = await resultResponse.json();
   const imageUrl = extractFalImageUrl(payload);
   if (!imageUrl) {
     const preview =
