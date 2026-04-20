@@ -190,7 +190,7 @@ export function SetupWizard({
                     <div className="flex items-center gap-3">
                       <div className="shrink-0 overflow-hidden rounded-full border border-white/14 bg-white/8">
                         <Image
-                          src="/luffy.png"
+                          src="/luffy.svg"
                           alt="Luffy, the bedtime companion"
                           width={56}
                           height={56}
@@ -416,6 +416,7 @@ export function SetupWizard({
               whileTap={{ scale: 0.985 }}
               onClick={handleNext}
               disabled={!canContinue}
+              data-testid="setup-continue"
               className="group mt-5 flex min-h-14 w-full items-center justify-center gap-2 rounded-[1.5rem] border border-[#b9cbff]/22 bg-[linear-gradient(135deg,rgba(140,170,255,0.34),rgba(44,83,188,0.34),rgba(255,214,155,0.18))] px-5 py-4 text-white shadow-[0_20px_44px_rgba(8,18,42,0.38)] transition hover:border-[#dbe5ff]/34 hover:shadow-[0_24px_54px_rgba(49,93,225,0.28)] disabled:cursor-not-allowed disabled:opacity-45"
             >
               <span className="text-sm font-semibold tracking-[0.18em] uppercase">

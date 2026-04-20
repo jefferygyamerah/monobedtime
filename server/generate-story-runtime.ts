@@ -181,9 +181,15 @@ function countStoryWords(story: BedtimeResponse) {
 }
 
 function isGeminiReviewerConfigured() {
-  return Boolean(
+  const reviewerEnabled =
+    (process.env.MONOBEDTIME_ENABLE_STORY_REVIEW ?? "").toLowerCase() === "true" ||
+    process.env.MONOBEDTIME_ENABLE_STORY_REVIEW === "1";
+  const reviewerKeyConfigured = Boolean(
     (process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY)?.trim(),
   );
+
+  // Default is disabled to keep latency and cost low.
+  return reviewerEnabled && reviewerKeyConfigured;
 }
 
 function fillerWordStream(input: BedtimeRequest) {

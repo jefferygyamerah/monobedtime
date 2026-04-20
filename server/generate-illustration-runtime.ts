@@ -12,6 +12,59 @@ import {
 let googleProvider: ReturnType<typeof createGoogleGenerativeAI> | null = null;
 
 const UNSPLASH_APP_NAME = "monobedtime";
+const FAL_FLUX_MODEL_URL = "https://fal.run/fal-ai/flux/schnell";
+const FAL_FETCH_TIMEOUT_MS = 120_000;
+
+function freeTierPrefersStockPhotosFirst() {
+  return process.env.MONOBEDTIME_FREE_TIER_STOCK_FIRST === "true";
+}
+
+function extractFalImageUrl(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const pickUrl = (entry: unknown): string | null => {
+    if (!entry || typeof entry !== "object") {
+      return null;
+    }
+    const o = entry as Record<string, unknown>;
+    const raw = o.url ?? o.file_url;
+    return typeof raw === "string" && raw.length > 0 ? raw : null;
+  };
+
+  const root = payload as Record<string, unknown>;
+
+  const fromImages = (images: unknown): string | null => {
+    if (!Array.isArray(images) || images.length === 0) {
+      return null;
+    }
+    return pickUrl(images[0]);
+  };
+
+  const direct = fromImages(root.images);
+  if (direct) {
+    return direct;
+  }
+
+  const data = root.data;
+  if (data && typeof data === "object") {
+    const nested = fromImages((data as Record<string, unknown>).images);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  const output = root.output;
+  if (output && typeof output === "object") {
+    const nested = fromImages((output as Record<string, unknown>).images);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  return null;
+}
 
 function logIllustrationRuntimeEvent(
   level: "warn" | "error",
@@ -40,6 +93,14 @@ function getGoogle() {
   }
 
   return googleProvider;
+}
+
+function getFalApiKey() {
+  return process.env.FAL_KEY ?? process.env.FAL_API_KEY ?? "";
+}
+
+function isFalConfigured() {
+  return Boolean(getFalApiKey().trim());
 }
 
 function languageDirection(language: IllustrationRequest["language"]) {
@@ -284,28 +345,55 @@ async function tryGeminiImage(input: IllustrationRequest) {
   );
 }
 
-async function tryGeminiPreviewImage(input: IllustrationRequest) {
-  const result = await generateImage({
-    model: getGoogle().image("gemini-3.1-flash-image-preview"),
-    prompt: buildPrompt(input),
-    aspectRatio: "16:9",
-    maxRetries: 0,
-    providerOptions: {
-      google: {
-        personGeneration: "allow_all",
-      },
+async function tryFalImage(input: IllustrationRequest) {
+  const falKey = getFalApiKey().trim();
+  if (!falKey) {
+    throw new Error("FAL is not configured.");
+  }
+
+  const response = await fetch(FAL_FLUX_MODEL_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${falKey}`,
+      "Content-Type": "application/json",
     },
+    body: JSON.stringify({
+      prompt: buildPrompt(input),
+      image_size: "landscape_16_9",
+      num_images: 1,
+      enable_safety_checker: true,
+    }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(FAL_FETCH_TIMEOUT_MS),
   });
 
-  return toIllustrationResponse(
-    result.image.mediaType,
-    result.image.base64,
-    localizedNote(
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`FAL image generation failed: ${response.status} ${errorText}`);
+  }
+
+  const payload: unknown = await response.json();
+  const imageUrl = extractFalImageUrl(payload);
+  if (!imageUrl) {
+    const preview =
+      typeof payload === "object" && payload !== null
+        ? JSON.stringify(payload).slice(0, 500)
+        : String(payload);
+    logIllustrationRuntimeEvent("warn", "fal_unexpected_response_shape", {
+      preview,
+    });
+    throw new Error("FAL image generation returned no image URL.");
+  }
+
+  return illustrationResponseSchema.parse({
+    imageDataUrl: imageUrl,
+    fallback: false,
+    note: localizedNote(
       input,
-      "AI illustration generated with Gemini preview.",
-      "Ilustracion generada con Gemini preview.",
+      "AI illustration generated with FAL.",
+      "Ilustracion generada con FAL.",
     ),
-  );
+  });
 }
 
 async function tryImagen(input: IllustrationRequest) {
@@ -342,37 +430,73 @@ export async function generateIllustrationWithOptions(
 ) {
   const input = illustrationRequestSchema.parse(rawInput);
   const preferUnsplash = options?.preferUnsplash ?? false;
-  const apiKey =
-    process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  const geminiApiKey = (
+    process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY ??
+    ""
+  ).trim();
 
   if (preferUnsplash) {
-    const unsplash = await tryUnsplash(input);
-    if (unsplash) {
-      return unsplash;
+    const stockFirst = freeTierPrefersStockPhotosFirst();
+
+    if (stockFirst) {
+      const unsplash = await tryUnsplash(input);
+      if (unsplash) {
+        return unsplash;
+      }
     }
 
-    logIllustrationRuntimeEvent("warn", "unsplash_not_available_preferred", {
+    if (isFalConfigured()) {
+      try {
+        return await tryFalImage(input);
+      } catch (falError) {
+        logIllustrationRuntimeEvent("warn", "fal_image_failed_free_tier", {
+          message: falError instanceof Error ? falError.message : String(falError),
+          stockFirstTried: stockFirst,
+        });
+      }
+    }
+
+    if (!stockFirst) {
+      const unsplash = await tryUnsplash(input);
+      if (unsplash) {
+        return unsplash;
+      }
+    }
+
+    logIllustrationRuntimeEvent("warn", "free_tier_no_illustration_source", {
       sceneType: input.sceneType,
       language: input.language,
+      falConfigured: isFalConfigured(),
+      unsplashConfigured: Boolean(process.env.UNSPLASH_ACCESS_KEY?.trim()),
     });
 
     return buildFallback(
       input,
       localizedNote(
         input,
-        "Unsplash is not configured on this deployment yet, so the app is showing the built-in illustration.",
-        "Unsplash todavia no esta configurado en este despliegue, asi que la app muestra la ilustracion integrada.",
+        "We could not load an AI or stock photo illustration, so the app is showing the built-in scene.",
+        "No pudimos cargar una ilustracion con IA ni de stock, asi que la app muestra la escena integrada.",
       ),
     );
   }
 
-  if (!apiKey) {
+  if (isFalConfigured()) {
+    try {
+      return await tryFalImage(input);
+    } catch (falError) {
+      logIllustrationRuntimeEvent("warn", "fal_image_failed", {
+        message: falError instanceof Error ? falError.message : String(falError),
+      });
+    }
+  }
+
+  if (!geminiApiKey.length) {
     const unsplash = await tryUnsplash(input);
     if (unsplash) {
       return unsplash;
     }
 
-    logIllustrationRuntimeEvent("warn", "gemini_not_configured_fallback", {
+    logIllustrationRuntimeEvent("warn", "no_ai_image_provider_configured", {
       sceneType: input.sceneType,
       language: input.language,
     });
@@ -381,8 +505,8 @@ export async function generateIllustrationWithOptions(
       input,
       localizedNote(
         input,
-        "Gemini is not configured on this deployment yet, so the app is showing the built-in illustration.",
-        "Gemini todavia no esta configurado en este despliegue, asi que la app muestra la ilustracion integrada.",
+        "No AI image provider is configured on this deployment yet, so the app is showing the built-in illustration.",
+        "No hay proveedor de imagen IA configurado en este despliegue, asi que la app muestra la ilustracion integrada.",
       ),
     );
   }
@@ -395,28 +519,6 @@ export async function generateIllustrationWithOptions(
     });
 
     const note = quotaFallbackNote(geminiError, input);
-
-    if (note) {
-      const unsplash = await tryUnsplash(input);
-      if (unsplash) {
-        return unsplash;
-      }
-
-      return buildFallback(input, note);
-    }
-  }
-
-  try {
-    return await tryGeminiPreviewImage(input);
-  } catch (geminiPreviewError) {
-    logIllustrationRuntimeEvent("warn", "gemini_preview_failed", {
-      message:
-        geminiPreviewError instanceof Error
-          ? geminiPreviewError.message
-          : String(geminiPreviewError),
-    });
-
-    const note = quotaFallbackNote(geminiPreviewError, input);
 
     if (note) {
       const unsplash = await tryUnsplash(input);

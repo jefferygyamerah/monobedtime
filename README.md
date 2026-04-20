@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MonoBedtime
 
-## Getting Started
+AI-generated bedtime stories with illustration and subscription support.
 
-First, run the development server:
+## Current State
+
+MonoBedtime is an MVP-stage product focused on fast validation, not a finished content platform yet.
+
+What already exists:
+
+- story generation flow
+- AI-assisted illustration pipeline
+- subscription and billing plumbing
+- mobile-friendly Next.js frontend
+
+What still needs validation:
+
+- subscription enforcement on premium generation paths
+- rate limiting and cost controls
+- fallback behavior when AI generation fails
+- launch positioning and analytics
+
+See `CURRENT_ISSUES.md` for the active backlog.
+
+## Stack
+
+- Next.js 14
+- React 18
+- TypeScript
+- Stripe
+- Vercel AI SDK
+
+## Local Development
+
+1. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+2. Start the app:
+
+   ```bash
+   npm run dev
+   ```
+
+3. Open `http://localhost:3000`
+
+## Verification
+
+Run:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+If billing, API integration, or generation behavior changes, do a manual end-to-end check of the story flow as well.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Key Files
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `app/` - routes and app shell
+- `components/` - product UI
+- `server/` - server-side helpers and integrations
+- `lib/` - shared utilities
 
-## Learn More
+## Collaboration Notes
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Read `CURRENT_ISSUES.md` before starting work.
+- Use `CONTRIBUTING.md` for branch and tracking expectations.
+- Keep changes small and tied to a single product or infrastructure concern.

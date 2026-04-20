@@ -10,6 +10,8 @@ import { getSubscriptionCookieName } from "@/server/subscription-access";
 import { ZodError } from "zod";
 
 export const runtime = "nodejs";
+/** Allow FAL / image providers time to finish on serverless (requires Vercel Pro for >10s). */
+export const maxDuration = 60;
 
 type ApiErrorResponse = {
   code: string;
@@ -92,7 +94,8 @@ export async function POST(request: Request) {
     }
 
     const illustration = await generateIllustrationWithOptions(parsedInput.data, {
-      // Free tier: use Unsplash (no per-image AI cost). Subscribers: prefer AI.
+      // Free tier: FAL first when configured (product default); stock photos as fallback.
+      // Set MONOBEDTIME_FREE_TIER_STOCK_FIRST=true to prefer Unsplash before FAL on free tier.
       preferUnsplash: !allowance.usage.subscribed,
     });
     return Response.json(

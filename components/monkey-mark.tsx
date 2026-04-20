@@ -28,11 +28,17 @@ export function MonkeyMark({
           strokeWidth="5"
           strokeLinecap="round"
         />
-        <circle cx="76" cy="20" r="6" fill="#FF7A00" />
-        <path
-          d="M72 16C74 16 76 18 76 20C76 18 78 16 80 16C78 16 76 14 76 12C76 14 74 16 72 16Z"
-          fill="#fff7ef"
-        />
+        <text
+          x="72"
+          y="18"
+          textAnchor="middle"
+          fill="#FF7A00"
+          fontSize="10"
+          fontWeight="700"
+          fontFamily="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
+        >
+          zZz
+        </text>
         <circle cx="31" cy="41" r="10" fill="#0b0b0b" />
         <circle cx="65" cy="41" r="10" fill="#0b0b0b" />
         <circle cx="31" cy="41" r="5.5" fill="#fffdf8" />
@@ -45,8 +51,20 @@ export function MonkeyMark({
           d="M48 31C39 31 31 38 31 48C31 61 39 70 48 70C57 70 65 61 65 48C65 38 57 31 48 31Z"
           fill="#fffdf8"
         />
-        <circle cx="43" cy="46" r="3" fill="#0b0b0b" />
-        <circle cx="53" cy="46" r="3" fill="#0b0b0b" />
+        <path
+          d="M39 45C41 43 43 43 45 45"
+          fill="none"
+          stroke="#0b0b0b"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        <path
+          d="M51 45C53 43 55 43 57 45"
+          fill="none"
+          stroke="#0b0b0b"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
         <path
           d="M46 55C47 53 49 53 50 55"
           fill="none"

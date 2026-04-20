@@ -1002,6 +1002,7 @@ export function NightlyScreen() {
                           type="button"
                           onClick={handleGenerate}
                           disabled={isGenerating}
+                          data-testid="generate-story"
                           className="group mt-4 flex w-full items-center justify-center gap-3 rounded-[1.55rem] border border-[#c9d3ff]/28 bg-[linear-gradient(135deg,rgba(191,219,254,0.26),rgba(129,140,248,0.34),rgba(251,191,36,0.18))] px-6 py-5 text-white transition hover:border-[#dce6ff]/42 hover:shadow-[0_18px_50px_rgba(129,140,248,0.24)] disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           {isGenerating ? (
@@ -1050,7 +1051,7 @@ export function NightlyScreen() {
                         <div className="flex items-center gap-3">
                           <div className="overflow-hidden rounded-[1.2rem] border border-white/12 bg-white/8">
                             <Image
-                              src="/luffy.png"
+                              src="/luffy.svg"
                               alt="Luffy, the bedtime companion"
                               width={80}
                               height={104}
