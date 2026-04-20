@@ -7,11 +7,16 @@ import {
   type IllustrationResponse,
 } from "@/lib/story-contract";
 
-/** Queue API — recommended by fal for production (retries, durable queue). */
+/** Synchronous endpoint — often fastest when it completes within the server timeout budget. */
+const FAL_FLUX_SYNC_URL = "https://fal.run/fal-ai/flux/schnell";
+/** Queue API — durable; use when sync fails or times out. */
 const FAL_FLUX_QUEUE_SUBMIT_URL = "https://queue.fal.run/fal-ai/flux/schnell";
 const FAL_FETCH_TIMEOUT_MS = 120_000;
 const FAL_QUEUE_POLL_MS = 600;
 const FAL_SINGLE_FETCH_MAX_MS = 45_000;
+
+/** Default ms for sync attempt (fits Vercel Hobby ~10s wall clock with overhead). */
+const FAL_SYNC_BUDGET_MS_DEFAULT = 9_000;
 
 function extractFalImageUrl(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") {
@@ -29,6 +34,14 @@ function extractFalImageUrl(payload: unknown): string | null {
 
   const root = payload as Record<string, unknown>;
 
+  const img = root.image;
+  if (img && typeof img === "object") {
+    const u = pickUrl(img);
+    if (u) {
+      return u;
+    }
+  }
+
   const fromImages = (images: unknown): string | null => {
     if (!Array.isArray(images) || images.length === 0) {
       return null;
@@ -43,7 +56,15 @@ function extractFalImageUrl(payload: unknown): string | null {
 
   const data = root.data;
   if (data && typeof data === "object") {
-    const nested = fromImages((data as Record<string, unknown>).images);
+    const d = data as Record<string, unknown>;
+    const di = d.image;
+    if (di && typeof di === "object") {
+      const u = pickUrl(di);
+      if (u) {
+        return u;
+      }
+    }
+    const nested = fromImages(d.images);
     if (nested) {
       return nested;
     }
@@ -144,7 +165,124 @@ function fetchTimeoutMs(deadline: number) {
   return Math.min(FAL_SINGLE_FETCH_MAX_MS, Math.max(5_000, left));
 }
 
-async function tryFalImage(input: IllustrationRequest) {
+function falSuccessResponse(
+  input: IllustrationRequest,
+  imageUrl: string,
+): IllustrationResponse {
+  return illustrationResponseSchema.parse({
+    imageDataUrl: imageUrl,
+    fallback: false,
+    note: localizedNote(
+      input,
+      "AI illustration generated with FAL.",
+      "Ilustracion generada con FAL.",
+    ),
+  });
+}
+
+/**
+ * Fast path: blocking fal.run call. Returns null so caller can fall back to queue.
+ */
+async function tryFalSyncGenerate(input: IllustrationRequest): Promise<IllustrationResponse | null> {
+  if (process.env.MONOBEDTIME_FAL_QUEUE_ONLY === "1") {
+    return null;
+  }
+
+  const falKey = getFalApiKey().trim();
+  if (!falKey) {
+    return null;
+  }
+
+  const budgetRaw = process.env.MONOBEDTIME_FAL_SYNC_BUDGET_MS;
+  const budget = Math.min(
+    60_000,
+    Math.max(
+      3_000,
+      budgetRaw ? Number.parseInt(budgetRaw, 10) || FAL_SYNC_BUDGET_MS_DEFAULT : FAL_SYNC_BUDGET_MS_DEFAULT,
+    ),
+  );
+
+  try {
+    const response = await fetch(FAL_FLUX_SYNC_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${falKey}`,
+        "Content-Type": "application/json",
+      },
+      body: falFluxInputBody(input),
+      cache: "no-store",
+      signal: AbortSignal.timeout(budget),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logIllustrationRuntimeEvent("warn", "fal_sync_http_error", {
+        status: response.status,
+        body: errorText.slice(0, 300),
+      });
+      return null;
+    }
+
+    const payload: unknown = await response.json();
+    const imageUrl = extractFalImageUrl(payload);
+    if (!imageUrl) {
+      logIllustrationRuntimeEvent("warn", "fal_sync_no_image_url", {
+        preview:
+          typeof payload === "object" && payload !== null
+            ? JSON.stringify(payload).slice(0, 400)
+            : String(payload),
+      });
+      return null;
+    }
+
+    return falSuccessResponse(input, imageUrl);
+  } catch (syncError) {
+    logIllustrationRuntimeEvent("warn", "fal_sync_failed", {
+      message: syncError instanceof Error ? syncError.message : String(syncError),
+    });
+    return null;
+  }
+}
+
+async function fetchQueueResultPayload(
+  requestId: string,
+  falKey: string,
+  primaryUrl: string,
+  deadline: number,
+): Promise<unknown> {
+  const candidates = Array.from(
+    new Set([
+      primaryUrl,
+      `${FAL_FLUX_QUEUE_SUBMIT_URL}/requests/${requestId}/response`,
+      `${FAL_FLUX_QUEUE_SUBMIT_URL}/requests/${requestId}`,
+    ]),
+  );
+
+  let lastError = "unknown";
+
+  for (const url of candidates) {
+    try {
+      const resultResponse = await fetch(url, {
+        headers: { Authorization: `Key ${falKey}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(fetchTimeoutMs(deadline)),
+      });
+
+      if (!resultResponse.ok) {
+        lastError = `${resultResponse.status} ${(await resultResponse.text()).slice(0, 200)}`;
+        continue;
+      }
+
+      return await resultResponse.json();
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  throw new Error(`FAL queue result failed (tried ${candidates.length} URLs): ${lastError}`);
+}
+
+async function tryFalQueueGenerate(input: IllustrationRequest): Promise<IllustrationResponse> {
   const falKey = getFalApiKey().trim();
   if (!falKey) {
     throw new Error("FAL is not configured.");
@@ -215,7 +353,9 @@ async function tryFalImage(input: IllustrationRequest) {
       resultFetchUrl = statusPayload.response_url;
     }
 
-    if (statusPayload.status === "COMPLETED") {
+    const st = statusPayload.status?.toUpperCase() ?? "";
+
+    if (st === "COMPLETED") {
       if (statusPayload.error) {
         throw new Error(
           `FAL generation failed: ${statusPayload.error}${
@@ -227,10 +367,7 @@ async function tryFalImage(input: IllustrationRequest) {
       break;
     }
 
-    if (
-      statusPayload.status &&
-      !["IN_QUEUE", "IN_PROGRESS"].includes(statusPayload.status)
-    ) {
+    if (st && !["IN_QUEUE", "IN_PROGRESS"].includes(st)) {
       throw new Error(
         `FAL queue stopped with status ${statusPayload.status}${
           statusPayload.error ? `: ${statusPayload.error}` : ""
@@ -245,41 +382,7 @@ async function tryFalImage(input: IllustrationRequest) {
     throw new Error("FAL queue timed out waiting for completion.");
   }
 
-  const resultResponse = await fetch(resultFetchUrl, {
-    headers: { Authorization: `Key ${falKey}` },
-    cache: "no-store",
-    signal: AbortSignal.timeout(fetchTimeoutMs(deadline)),
-  });
-
-  if (!resultResponse.ok) {
-    const fallbackUrl = `${FAL_FLUX_QUEUE_SUBMIT_URL}/requests/${requestId}`;
-    if (resultFetchUrl !== fallbackUrl) {
-      const retry = await fetch(fallbackUrl, {
-        headers: { Authorization: `Key ${falKey}` },
-        cache: "no-store",
-        signal: AbortSignal.timeout(fetchTimeoutMs(deadline)),
-      });
-      if (retry.ok) {
-        const payloadRetry: unknown = await retry.json();
-        const imageUrlRetry = extractFalImageUrl(payloadRetry);
-        if (imageUrlRetry) {
-          return illustrationResponseSchema.parse({
-            imageDataUrl: imageUrlRetry,
-            fallback: false,
-            note: localizedNote(
-              input,
-              "AI illustration generated with FAL.",
-              "Ilustracion generada con FAL.",
-            ),
-          });
-        }
-      }
-    }
-    const errorText = await resultResponse.text();
-    throw new Error(`FAL queue result failed: ${resultResponse.status} ${errorText}`);
-  }
-
-  const payload: unknown = await resultResponse.json();
+  const payload = await fetchQueueResultPayload(requestId, falKey, resultFetchUrl, deadline);
   const imageUrl = extractFalImageUrl(payload);
   if (!imageUrl) {
     const preview =
@@ -293,20 +396,12 @@ async function tryFalImage(input: IllustrationRequest) {
     throw new Error("FAL image generation returned no image URL.");
   }
 
-  return illustrationResponseSchema.parse({
-    imageDataUrl: imageUrl,
-    fallback: false,
-    note: localizedNote(
-      input,
-      "AI illustration generated with FAL.",
-      "Ilustracion generada con FAL.",
-    ),
-  });
+  return falSuccessResponse(input, imageUrl);
 }
 
 /**
- * Generate illustration via FAL only. Returns built-in fallback (HTTP 200 from route) when FAL
- * is missing or fails — avoids 502 for model/infrastructure errors.
+ * FAL-only illustrations. Throws on generation failure so the API route can return 502 with detail.
+ * Returns fallback only when FAL_KEY is missing.
  */
 export async function generateIllustration(rawInput: unknown) {
   const input = illustrationRequestSchema.parse(rawInput);
@@ -325,18 +420,10 @@ export async function generateIllustration(rawInput: unknown) {
     );
   }
 
-  try {
-    return await tryFalImage(input);
-  } catch (falError) {
-    const message = falError instanceof Error ? falError.message : String(falError);
-    logIllustrationRuntimeEvent("warn", "fal_image_failed", { message });
-    return buildFallback(
-      input,
-      localizedNote(
-        input,
-        "FAL illustration did not finish. Built-in scene shown; try again shortly.",
-        "La ilustracion FAL no termino. Escena integrada; reintenta pronto.",
-      ),
-    );
+  const sync = await tryFalSyncGenerate(input);
+  if (sync) {
+    return sync;
   }
+
+  return await tryFalQueueGenerate(input);
 }
