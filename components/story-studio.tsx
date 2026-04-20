@@ -9,6 +9,7 @@ import {
 } from "react";
 import { MonkeyMark } from "@/components/monkey-mark";
 import { ScenePoster } from "@/components/scene-poster";
+import { monobedtimeQuotaHeaders } from "@/lib/monobedtime-client-identity";
 import type {
   BedtimeRequest,
   BedtimeResponse,
@@ -210,6 +211,7 @@ export function StoryStudio() {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
+                ...monobedtimeQuotaHeaders(),
               },
               body: JSON.stringify({
                 title: target.title,
@@ -293,6 +295,7 @@ export function StoryStudio() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...monobedtimeQuotaHeaders(),
         },
         body: JSON.stringify(toApiPayload(form)),
       });

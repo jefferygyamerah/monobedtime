@@ -11,6 +11,10 @@ import { SoundDock } from "@/components/sound-dock";
 import { SetupWizard, type SetupProfile } from "@/components/setup-wizard";
 import { StoryBookReader } from "@/components/story-book-reader";
 import { useBedtimeAudio } from "@/components/use-bedtime-audio";
+import {
+  createLocalDayKey,
+  ensureMonobedtimeSessionId,
+} from "@/lib/monobedtime-client-identity";
 import type {
   BedtimeRequest,
   BedtimeResponse,
@@ -154,41 +158,6 @@ function moodToBedtimeMood(mood: Mood): BedtimeRequest["bedtimeMood"] {
   }
 
   return "calm";
-}
-
-function createLocalDayKey() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = `${now.getMonth() + 1}`.padStart(2, "0");
-  const day = `${now.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function createSessionId() {
-  if (typeof window === "undefined") {
-    return "guest-session";
-  }
-
-  if (typeof window.crypto?.randomUUID === "function") {
-    return window.crypto.randomUUID();
-  }
-
-  return `session-${Date.now()}-${Math.round(Math.random() * 1_000_000)}`;
-}
-
-function ensureSessionId() {
-  if (typeof window === "undefined") {
-    return "guest-session";
-  }
-
-  const existing = window.localStorage.getItem("monobedtime-session-id");
-  if (existing) {
-    return existing;
-  }
-
-  const next = createSessionId();
-  window.localStorage.setItem("monobedtime-session-id", next);
-  return next;
 }
 
 function parseSavedProfile(rawValue: string | null): SetupProfile | null {
@@ -388,7 +357,7 @@ export function NightlyScreen() {
   }, [requestHeaders]);
 
   useEffect(() => {
-    sessionIdRef.current = ensureSessionId();
+    sessionIdRef.current = ensureMonobedtimeSessionId();
     dayKeyRef.current = createLocalDayKey();
     void refreshStatus();
   }, [refreshStatus]);

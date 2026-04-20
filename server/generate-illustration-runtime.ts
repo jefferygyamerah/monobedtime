@@ -78,6 +78,15 @@ function extractFalImageUrl(payload: unknown): string | null {
     }
   }
 
+  const result = root.result;
+  if (result && typeof result === "object") {
+    const r = result as Record<string, unknown>;
+    const nested = fromImages(r.images);
+    if (nested) {
+      return nested;
+    }
+  }
+
   return null;
 }
 
@@ -156,6 +165,8 @@ function falFluxInputBody(input: IllustrationRequest) {
     prompt: buildPrompt(input),
     image_size: "landscape_16_9",
     num_images: 1,
+    /** Lower steps keep sync generation inside typical serverless windows (e.g. Vercel Hobby ~10s). */
+    num_inference_steps: 2,
     enable_safety_checker: true,
   });
 }
