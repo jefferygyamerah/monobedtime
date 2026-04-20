@@ -183,7 +183,7 @@ export function StoryStudio() {
         cover: null,
         blocks: {},
         loading: true,
-        note: "Preparing premium art with Gemini in the background...",
+        note: "Preparing scene art with FAL...",
       });
 
       const targets = [
@@ -683,7 +683,7 @@ export function StoryStudio() {
               </p>
               {illustrations.loading ? (
                 <p className="mt-3 text-sm text-black/50">
-                  Gemini is still working in the background on the cover and first scenes.
+                  Scene art is still generating for the cover and first scenes.
                 </p>
               ) : null}
             </div>

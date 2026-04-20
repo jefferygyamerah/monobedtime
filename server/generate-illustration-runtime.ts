@@ -1,15 +1,11 @@
 import "server-only";
 
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateImage } from "ai";
 import {
   illustrationRequestSchema,
   illustrationResponseSchema,
   type IllustrationRequest,
   type IllustrationResponse,
 } from "@/lib/story-contract";
-
-let googleProvider: ReturnType<typeof createGoogleGenerativeAI> | null = null;
 
 const UNSPLASH_APP_NAME = "monobedtime";
 /** Queue API is fal’s recommended path; survives cold starts better than synchronous fal.run. */
@@ -82,19 +78,6 @@ function logIllustrationRuntimeEvent(
       timestamp: new Date().toISOString(),
     }),
   );
-}
-
-function getGoogle() {
-  if (!googleProvider) {
-    googleProvider = createGoogleGenerativeAI({
-      apiKey:
-        process.env.GEMINI_API_KEY ??
-        process.env.GOOGLE_GENERATIVE_AI_API_KEY ??
-        "",
-    });
-  }
-
-  return googleProvider;
 }
 
 function getFalApiKey() {
@@ -282,71 +265,6 @@ async function tryUnsplash(input: IllustrationRequest): Promise<IllustrationResp
   });
 }
 
-function toErrorMessage(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return String(error);
-}
-
-function quotaFallbackNote(
-  error: unknown,
-  input: IllustrationRequest,
-) {
-  const message = toErrorMessage(error).toLowerCase();
-
-  if (
-    message.includes("quota exceeded") ||
-    message.includes("limit: 0") ||
-    message.includes("paid plans")
-  ) {
-    return localizedNote(
-      input,
-      "Gemini image quota is unavailable on this deployment, so the app is showing the built-in illustration.",
-      "La cuota de imagen de Gemini no esta disponible en este despliegue, asi que la app muestra la ilustracion integrada.",
-    );
-  }
-
-  return null;
-}
-
-function toIllustrationResponse(
-  mediaType: string,
-  base64: string,
-  note: string,
-): IllustrationResponse {
-  return illustrationResponseSchema.parse({
-    imageDataUrl: `data:${mediaType};base64,${base64}`,
-    fallback: false,
-    note,
-  });
-}
-
-async function tryGeminiImage(input: IllustrationRequest) {
-  const result = await generateImage({
-    model: getGoogle().image("gemini-2.5-flash-image"),
-    prompt: buildPrompt(input),
-    aspectRatio: "16:9",
-    maxRetries: 0,
-    providerOptions: {
-      google: {
-        personGeneration: "allow_all",
-      },
-    },
-  });
-
-  return toIllustrationResponse(
-    result.image.mediaType,
-    result.image.base64,
-    localizedNote(
-      input,
-      "AI illustration generated with Gemini.",
-      "Ilustracion generada con Gemini.",
-    ),
-  );
-}
-
 function falFluxInputBody(input: IllustrationRequest) {
   return JSON.stringify({
     prompt: buildPrompt(input),
@@ -469,30 +387,6 @@ async function tryFalImage(input: IllustrationRequest) {
   });
 }
 
-async function tryImagen(input: IllustrationRequest) {
-  const result = await generateImage({
-    model: getGoogle().image("imagen-4.0-fast-generate-001"),
-    prompt: buildPrompt(input),
-    aspectRatio: "16:9",
-    maxRetries: 0,
-    providerOptions: {
-      google: {
-        personGeneration: "allow_all",
-      },
-    },
-  });
-
-  return toIllustrationResponse(
-    result.image.mediaType,
-    result.image.base64,
-    localizedNote(
-      input,
-      "AI illustration generated with Google Imagen.",
-      "Ilustracion generada con Google Imagen.",
-    ),
-  );
-}
-
 export async function generateIllustration(rawInput: unknown) {
   return generateIllustrationWithOptions(rawInput, { preferUnsplash: false });
 }
@@ -503,10 +397,6 @@ export async function generateIllustrationWithOptions(
 ) {
   const input = illustrationRequestSchema.parse(rawInput);
   const preferUnsplash = options?.preferUnsplash ?? false;
-  const geminiApiKey = (
-    process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY ??
-    ""
-  ).trim();
 
   if (preferUnsplash) {
     const stockFirst = freeTierPrefersStockPhotosFirst();
@@ -563,68 +453,24 @@ export async function generateIllustrationWithOptions(
     }
   }
 
-  if (!geminiApiKey.length) {
-    const unsplash = await tryUnsplash(input);
-    if (unsplash) {
-      return unsplash;
-    }
+  const unsplash = await tryUnsplash(input);
+  if (unsplash) {
+    return unsplash;
+  }
 
-    logIllustrationRuntimeEvent("warn", "no_ai_image_provider_configured", {
-      sceneType: input.sceneType,
-      language: input.language,
-    });
+  logIllustrationRuntimeEvent("warn", "no_illustration_after_fal", {
+    sceneType: input.sceneType,
+    language: input.language,
+    falConfigured: isFalConfigured(),
+    unsplashConfigured: Boolean(process.env.UNSPLASH_ACCESS_KEY?.trim()),
+  });
 
-    return buildFallback(
+  return buildFallback(
+    input,
+    localizedNote(
       input,
-      localizedNote(
-        input,
-        "No AI image provider is configured on this deployment yet, so the app is showing the built-in illustration.",
-        "No hay proveedor de imagen IA configurado en este despliegue, asi que la app muestra la ilustracion integrada.",
-      ),
-    );
-  }
-
-  try {
-    return await tryGeminiImage(input);
-  } catch (geminiError) {
-    logIllustrationRuntimeEvent("warn", "gemini_image_failed", {
-      message: geminiError instanceof Error ? geminiError.message : String(geminiError),
-    });
-
-    const note = quotaFallbackNote(geminiError, input);
-
-    if (note) {
-      const unsplash = await tryUnsplash(input);
-      if (unsplash) {
-        return unsplash;
-      }
-
-      return buildFallback(input, note);
-    }
-  }
-
-  try {
-    return await tryImagen(input);
-  } catch (imagenError) {
-    logIllustrationRuntimeEvent("error", "imagen_failed_fallback", {
-      message: imagenError instanceof Error ? imagenError.message : String(imagenError),
-      sceneType: input.sceneType,
-      language: input.language,
-    });
-
-    const unsplash = await tryUnsplash(input);
-    if (unsplash) {
-      return unsplash;
-    }
-
-    return buildFallback(
-      input,
-      quotaFallbackNote(imagenError, input) ??
-        localizedNote(
-          input,
-          "AI illustration could not finish, so the app is showing the built-in illustration.",
-          "No pudimos terminar la ilustracion con IA, asi que la app muestra la ilustracion integrada.",
-        ),
-    );
-  }
+      "We could not create a FAL illustration or load a stock photo, so the app is showing the built-in scene.",
+      "No pudimos crear una ilustracion con FAL ni cargar una foto de stock, asi que la app muestra la escena integrada.",
+    ),
+  );
 }

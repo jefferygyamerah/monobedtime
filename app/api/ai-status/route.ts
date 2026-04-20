@@ -20,7 +20,7 @@ export async function GET() {
       storyWriterConfigured: isConfigured(process.env.DEEPSEEK_API_KEY),
       storyReviewerConfigured: storyReviewEnabled && isConfigured(geminiKey),
       imageGeneratorConfigured:
-        isConfigured(falKey) || isConfigured(geminiKey) || isConfigured(unsplashKey),
+        isConfigured(falKey) || isConfigured(unsplashKey),
       subscriptionConfigured: isImageSubscriptionConfigured(),
     },
     {
