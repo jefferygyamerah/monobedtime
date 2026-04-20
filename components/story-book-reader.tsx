@@ -27,7 +27,6 @@ type ReaderPage = {
   sceneType: keyof typeof ambientColorByScene;
   triggerLuffyYawn: boolean;
   imageDataUrl: string | null;
-  attribution?: IllustrationResponse["attribution"];
   isCover: boolean;
 };
 
@@ -56,7 +55,6 @@ function buildReaderPages(
       sceneType: story.coverScene.sceneType,
       triggerLuffyYawn: true,
       imageDataUrl: coverArt?.imageDataUrl ?? null,
-      attribution: coverArt?.attribution,
       isCover: true,
     },
   ];
@@ -73,7 +71,6 @@ function buildReaderPages(
         block.sceneType === "moon" ||
         block.sceneType === "clouds",
       imageDataUrl: blockArt[index]?.imageDataUrl ?? null,
-      attribution: blockArt[index]?.attribution,
       isCover: false,
     });
   });
@@ -550,29 +547,6 @@ export function StoryBookReader({
                 <p className="text-[11px] leading-5 text-white/70">
                   {actionNote}
                 </p>
-                {page.attribution?.provider === "unsplash" ? (
-                  <p className="text-[11px] leading-5 text-white/60">
-                    Photo by{" "}
-                    <a
-                      href={page.attribution.photographerUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline decoration-white/30 underline-offset-4 hover:decoration-white/60"
-                    >
-                      {page.attribution.photographerName}
-                    </a>{" "}
-                    on{" "}
-                    <a
-                      href={page.attribution.photoUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline decoration-white/30 underline-offset-4 hover:decoration-white/60"
-                    >
-                      Unsplash
-                    </a>
-                    .
-                  </p>
-                ) : null}
                 {actionError ? (
                   <p className="rounded-2xl border border-rose-300/24 bg-rose-300/10 px-3 py-2 text-[12px] leading-5 text-rose-50">
                     {actionError}

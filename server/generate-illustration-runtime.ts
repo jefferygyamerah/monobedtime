@@ -341,7 +341,7 @@ export async function generateIllustration(rawInput: unknown) {
   }
 }
 
-/** @deprecated Use {@link generateIllustration}; Unsplash and tier branching were removed. */
+/** @deprecated Use {@link generateIllustration} only. */
 export async function generateIllustrationWithOptions(
   rawInput: unknown,
   _options?: unknown,
