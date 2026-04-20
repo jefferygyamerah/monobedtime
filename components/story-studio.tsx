@@ -265,7 +265,7 @@ export function StoryStudio() {
       note:
           successful > 0
             ? "Premium illustrations are ready."
-            : "The built-in scene art is still carrying the experience beautifully while Gemini stays unavailable.",
+            : "Built-in scene art is showing while FAL illustrations are unavailable or still loading.",
       });
     }
 
@@ -560,7 +560,7 @@ export function StoryStudio() {
           </div>
 
           <p className="mt-4 max-w-xl text-base leading-7 text-black/62">
-            This area stays blank until you generate a story. DeepSeek writes first, Gemini reviews coherence and engagement, then scene art is generated.
+            This area stays blank until you generate a story. DeepSeek writes the tale; optional Gemini can review when enabled; scene art is generated with FAL when FAL_KEY is set.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">

@@ -7,15 +7,11 @@ import {
   type IllustrationResponse,
 } from "@/lib/story-contract";
 
-const UNSPLASH_APP_NAME = "monobedtime";
-/** Queue API is fal’s recommended path; survives cold starts better than synchronous fal.run. */
+/** Queue API — recommended by fal for production (retries, durable queue). */
 const FAL_FLUX_QUEUE_SUBMIT_URL = "https://queue.fal.run/fal-ai/flux/schnell";
 const FAL_FETCH_TIMEOUT_MS = 120_000;
-const FAL_QUEUE_POLL_MS = 750;
-
-function freeTierPrefersStockPhotosFirst() {
-  return process.env.MONOBEDTIME_FREE_TIER_STOCK_FIRST === "true";
-}
+const FAL_QUEUE_POLL_MS = 600;
+const FAL_SINGLE_FETCH_MAX_MS = 45_000;
 
 function extractFalImageUrl(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") {
@@ -134,137 +130,6 @@ function buildFallback(
   });
 }
 
-function buildUnsplashAttributionLinks(photoUrl: string, photographerUrl: string) {
-  const photo = new URL(photoUrl);
-  photo.searchParams.set("utm_source", UNSPLASH_APP_NAME);
-  photo.searchParams.set("utm_medium", "referral");
-
-  const profile = new URL(photographerUrl);
-  profile.searchParams.set("utm_source", UNSPLASH_APP_NAME);
-  profile.searchParams.set("utm_medium", "referral");
-
-  return {
-    photoUrl: photo.toString(),
-    photographerUrl: profile.toString(),
-  };
-}
-
-function toUnsplashImageUrl(rawUrl: string) {
-  const url = new URL(rawUrl);
-  url.searchParams.set("auto", "format");
-  url.searchParams.set("fit", "crop");
-  url.searchParams.set("crop", "entropy");
-  url.searchParams.set("w", "1600");
-  url.searchParams.set("h", "900");
-  url.searchParams.set("q", "80");
-  return url.toString();
-}
-
-function sceneQueryHint(sceneType: IllustrationRequest["sceneType"]) {
-  switch (sceneType) {
-    case "moon":
-      return "moonlight night sky";
-    case "clouds":
-      return "soft clouds night";
-    case "forest":
-      return "quiet forest night";
-    case "jungle":
-      return "gentle jungle night";
-    case "ocean":
-      return "calm ocean night";
-    case "mountains":
-      return "sleepy mountains night";
-    case "village":
-      return "warm village night";
-    case "city":
-      return "quiet city night";
-    default:
-      return "bedtime night";
-  }
-}
-
-function buildUnsplashQuery(input: IllustrationRequest) {
-  const base = `${sceneQueryHint(input.sceneType)} ${input.title} ${input.prompt}`
-    .replace(/[^\w\s-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  // Keep the query short and avoid names leaking into search.
-  return base.split(" ").slice(0, 14).join(" ").trim() || sceneQueryHint(input.sceneType);
-}
-
-async function tryUnsplash(input: IllustrationRequest): Promise<IllustrationResponse | null> {
-  const accessKey = process.env.UNSPLASH_ACCESS_KEY?.trim();
-  if (!accessKey) {
-    return null;
-  }
-
-  const searchUrl = new URL("https://api.unsplash.com/search/photos");
-  searchUrl.searchParams.set("query", buildUnsplashQuery(input));
-  searchUrl.searchParams.set("orientation", "landscape");
-  searchUrl.searchParams.set("content_filter", "high");
-  searchUrl.searchParams.set("per_page", "10");
-
-  const response = await fetch(searchUrl, {
-    headers: {
-      Authorization: `Client-ID ${accessKey}`,
-      "Accept-Version": "v1",
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    return null;
-  }
-
-  const payload = (await response.json()) as {
-    results?: Array<{
-      urls?: { raw?: string };
-      links?: { html?: string; download_location?: string };
-      user?: { name?: string; links?: { html?: string } };
-    }>;
-  };
-
-  const pick = payload.results?.find((result) => Boolean(result.urls?.raw && result.user?.name));
-  if (!pick?.urls?.raw || !pick.user?.name) {
-    return null;
-  }
-
-  // Unsplash API guideline: hit download_location when the photo is used.
-  if (pick.links?.download_location) {
-    fetch(`${pick.links.download_location}`, {
-      headers: {
-        Authorization: `Client-ID ${accessKey}`,
-        "Accept-Version": "v1",
-      },
-      cache: "no-store",
-    }).catch(() => undefined);
-  }
-
-  const photoUrlRaw = pick.links?.html ?? "https://unsplash.com";
-  const photographerUrlRaw = pick.user.links?.html ?? "https://unsplash.com";
-  const { photoUrl, photographerUrl } = buildUnsplashAttributionLinks(
-    photoUrlRaw,
-    photographerUrlRaw,
-  );
-
-  return illustrationResponseSchema.parse({
-    imageDataUrl: toUnsplashImageUrl(pick.urls.raw),
-    fallback: false,
-    note: localizedNote(
-      input,
-      "Photo selected from Unsplash.",
-      "Foto seleccionada de Unsplash.",
-    ),
-    attribution: {
-      provider: "unsplash",
-      photographerName: pick.user.name,
-      photographerUrl,
-      photoUrl,
-    },
-  });
-}
-
 function falFluxInputBody(input: IllustrationRequest) {
   return JSON.stringify({
     prompt: buildPrompt(input),
@@ -272,6 +137,11 @@ function falFluxInputBody(input: IllustrationRequest) {
     num_images: 1,
     enable_safety_checker: true,
   });
+}
+
+function fetchTimeoutMs(deadline: number) {
+  const left = deadline - Date.now();
+  return Math.min(FAL_SINGLE_FETCH_MAX_MS, Math.max(5_000, left));
 }
 
 async function tryFalImage(input: IllustrationRequest) {
@@ -286,12 +156,14 @@ async function tryFalImage(input: IllustrationRequest) {
   } as const;
 
   const body = falFluxInputBody(input);
+  const deadline = Date.now() + FAL_FETCH_TIMEOUT_MS;
 
   const submitResponse = await fetch(FAL_FLUX_QUEUE_SUBMIT_URL, {
     method: "POST",
     headers: authHeaders,
     body,
     cache: "no-store",
+    signal: AbortSignal.timeout(fetchTimeoutMs(deadline)),
   });
 
   if (!submitResponse.ok) {
@@ -302,6 +174,7 @@ async function tryFalImage(input: IllustrationRequest) {
   const submitPayload = (await submitResponse.json()) as {
     request_id?: string;
     status_url?: string;
+    response_url?: string;
   };
 
   const requestId = submitPayload.request_id;
@@ -313,13 +186,17 @@ async function tryFalImage(input: IllustrationRequest) {
     submitPayload.status_url ??
     `${FAL_FLUX_QUEUE_SUBMIT_URL}/requests/${requestId}/status`;
 
-  const deadline = Date.now() + FAL_FETCH_TIMEOUT_MS;
+  let resultFetchUrl =
+    submitPayload.response_url ??
+    `${FAL_FLUX_QUEUE_SUBMIT_URL}/requests/${requestId}`;
+
   let completedOk = false;
 
   while (Date.now() < deadline) {
     const statusResponse = await fetch(statusUrl, {
       headers: { Authorization: `Key ${falKey}` },
       cache: "no-store",
+      signal: AbortSignal.timeout(fetchTimeoutMs(deadline)),
     });
 
     if (!statusResponse.ok) {
@@ -331,7 +208,12 @@ async function tryFalImage(input: IllustrationRequest) {
       status?: string;
       error?: string;
       error_type?: string;
+      response_url?: string;
     };
+
+    if (statusPayload.response_url) {
+      resultFetchUrl = statusPayload.response_url;
+    }
 
     if (statusPayload.status === "COMPLETED") {
       if (statusPayload.error) {
@@ -345,6 +227,17 @@ async function tryFalImage(input: IllustrationRequest) {
       break;
     }
 
+    if (
+      statusPayload.status &&
+      !["IN_QUEUE", "IN_PROGRESS"].includes(statusPayload.status)
+    ) {
+      throw new Error(
+        `FAL queue stopped with status ${statusPayload.status}${
+          statusPayload.error ? `: ${statusPayload.error}` : ""
+        }`,
+      );
+    }
+
     await new Promise((resolve) => setTimeout(resolve, FAL_QUEUE_POLL_MS));
   }
 
@@ -352,13 +245,36 @@ async function tryFalImage(input: IllustrationRequest) {
     throw new Error("FAL queue timed out waiting for completion.");
   }
 
-  const resultUrl = `${FAL_FLUX_QUEUE_SUBMIT_URL}/requests/${requestId}`;
-  const resultResponse = await fetch(resultUrl, {
+  const resultResponse = await fetch(resultFetchUrl, {
     headers: { Authorization: `Key ${falKey}` },
     cache: "no-store",
+    signal: AbortSignal.timeout(fetchTimeoutMs(deadline)),
   });
 
   if (!resultResponse.ok) {
+    const fallbackUrl = `${FAL_FLUX_QUEUE_SUBMIT_URL}/requests/${requestId}`;
+    if (resultFetchUrl !== fallbackUrl) {
+      const retry = await fetch(fallbackUrl, {
+        headers: { Authorization: `Key ${falKey}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(fetchTimeoutMs(deadline)),
+      });
+      if (retry.ok) {
+        const payloadRetry: unknown = await retry.json();
+        const imageUrlRetry = extractFalImageUrl(payloadRetry);
+        if (imageUrlRetry) {
+          return illustrationResponseSchema.parse({
+            imageDataUrl: imageUrlRetry,
+            fallback: false,
+            note: localizedNote(
+              input,
+              "AI illustration generated with FAL.",
+              "Ilustracion generada con FAL.",
+            ),
+          });
+        }
+      }
+    }
     const errorText = await resultResponse.text();
     throw new Error(`FAL queue result failed: ${resultResponse.status} ${errorText}`);
   }
@@ -372,6 +288,7 @@ async function tryFalImage(input: IllustrationRequest) {
         : String(payload);
     logIllustrationRuntimeEvent("warn", "fal_unexpected_response_shape", {
       preview,
+      requestId,
     });
     throw new Error("FAL image generation returned no image URL.");
   }
@@ -387,90 +304,47 @@ async function tryFalImage(input: IllustrationRequest) {
   });
 }
 
+/**
+ * Generate illustration via FAL only. Returns built-in fallback (HTTP 200 from route) when FAL
+ * is missing or fails — avoids 502 for model/infrastructure errors.
+ */
 export async function generateIllustration(rawInput: unknown) {
-  return generateIllustrationWithOptions(rawInput, { preferUnsplash: false });
-}
-
-export async function generateIllustrationWithOptions(
-  rawInput: unknown,
-  options?: { preferUnsplash?: boolean },
-) {
   const input = illustrationRequestSchema.parse(rawInput);
-  const preferUnsplash = options?.preferUnsplash ?? false;
 
-  if (preferUnsplash) {
-    const stockFirst = freeTierPrefersStockPhotosFirst();
-
-    if (stockFirst) {
-      const unsplash = await tryUnsplash(input);
-      if (unsplash) {
-        return unsplash;
-      }
-    }
-
-    if (isFalConfigured()) {
-      try {
-        return await tryFalImage(input);
-      } catch (falError) {
-        logIllustrationRuntimeEvent("warn", "fal_image_failed_free_tier", {
-          message: falError instanceof Error ? falError.message : String(falError),
-          stockFirstTried: stockFirst,
-        });
-      }
-    }
-
-    if (!stockFirst) {
-      const unsplash = await tryUnsplash(input);
-      if (unsplash) {
-        return unsplash;
-      }
-    }
-
-    logIllustrationRuntimeEvent("warn", "free_tier_no_illustration_source", {
+  if (!isFalConfigured()) {
+    logIllustrationRuntimeEvent("warn", "fal_not_configured", {
       sceneType: input.sceneType,
-      language: input.language,
-      falConfigured: isFalConfigured(),
-      unsplashConfigured: Boolean(process.env.UNSPLASH_ACCESS_KEY?.trim()),
     });
-
     return buildFallback(
       input,
       localizedNote(
         input,
-        "We could not load an AI or stock photo illustration, so the app is showing the built-in scene.",
-        "No pudimos cargar una ilustracion con IA ni de stock, asi que la app muestra la escena integrada.",
+        "FAL is not configured (set FAL_KEY). Showing the built-in scene for now.",
+        "FAL no esta configurado (FAL_KEY). Mostramos la escena integrada por ahora.",
       ),
     );
   }
 
-  if (isFalConfigured()) {
-    try {
-      return await tryFalImage(input);
-    } catch (falError) {
-      logIllustrationRuntimeEvent("warn", "fal_image_failed", {
-        message: falError instanceof Error ? falError.message : String(falError),
-      });
-    }
-  }
-
-  const unsplash = await tryUnsplash(input);
-  if (unsplash) {
-    return unsplash;
-  }
-
-  logIllustrationRuntimeEvent("warn", "no_illustration_after_fal", {
-    sceneType: input.sceneType,
-    language: input.language,
-    falConfigured: isFalConfigured(),
-    unsplashConfigured: Boolean(process.env.UNSPLASH_ACCESS_KEY?.trim()),
-  });
-
-  return buildFallback(
-    input,
-    localizedNote(
+  try {
+    return await tryFalImage(input);
+  } catch (falError) {
+    const message = falError instanceof Error ? falError.message : String(falError);
+    logIllustrationRuntimeEvent("warn", "fal_image_failed", { message });
+    return buildFallback(
       input,
-      "We could not create a FAL illustration or load a stock photo, so the app is showing the built-in scene.",
-      "No pudimos crear una ilustracion con FAL ni cargar una foto de stock, asi que la app muestra la escena integrada.",
-    ),
-  );
+      localizedNote(
+        input,
+        "FAL illustration did not finish. Built-in scene shown; try again shortly.",
+        "La ilustracion FAL no termino. Escena integrada; reintenta pronto.",
+      ),
+    );
+  }
+}
+
+/** @deprecated Use {@link generateIllustration}; Unsplash and tier branching were removed. */
+export async function generateIllustrationWithOptions(
+  rawInput: unknown,
+  _options?: unknown,
+) {
+  return generateIllustration(rawInput);
 }

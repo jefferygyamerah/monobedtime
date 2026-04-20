@@ -5,7 +5,7 @@ import {
   normalizeSessionId,
   reserveImageGeneration,
 } from "@/server/image-access";
-import { generateIllustrationWithOptions } from "@/server/generate-illustration-runtime";
+import { generateIllustration } from "@/server/generate-illustration-runtime";
 import { getSubscriptionCookieName } from "@/server/subscription-access";
 import { ZodError } from "zod";
 
@@ -93,11 +93,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const illustration = await generateIllustrationWithOptions(parsedInput.data, {
-      // Free tier: FAL first when configured (product default); stock photos as fallback.
-      // Set MONOBEDTIME_FREE_TIER_STOCK_FIRST=true to prefer Unsplash before FAL on free tier.
-      preferUnsplash: !allowance.usage.subscribed,
-    });
+    const illustration = await generateIllustration(parsedInput.data);
     return Response.json(
       {
         ...illustration,
