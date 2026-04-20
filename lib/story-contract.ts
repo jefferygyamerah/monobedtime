@@ -66,14 +66,6 @@ export const illustrationResponseSchema = z
     imageDataUrl: z.string().nullable(),
     fallback: z.boolean(),
     note: z.string().min(1).max(160),
-    attribution: z
-      .object({
-        provider: z.literal("unsplash"),
-        photographerName: z.string().min(1).max(80),
-        photographerUrl: z.string().url().max(500),
-        photoUrl: z.string().url().max(500),
-      })
-      .optional(),
   })
   .strict();
 
